@@ -1,9 +1,9 @@
 #ifndef __BOTFACTORY
 #define __BOTFACTORY
 
+#include <iostream>
 #include <string>
 #include <cstdlib>
-#include <climits>
 
 using namespace std;
 
@@ -22,10 +22,10 @@ namespace bot_factory {
       virtual ~botbot() {}
 
       virtual string name() {
-        char namec[29];
+        char namec[32] = {' '};
         sprintf(namec, "botbot_n%db%dgc%d-v%d", nuts, bolts, grid_cycles, gen);
         const char * cnamec = namec;
-        string ret(cnamec, 29);
+        string ret(cnamec, 32);
         return ret;
       }
 
@@ -43,7 +43,6 @@ namespace bot_factory {
     public:
 
       legacy_botbot() {
-        cout << "Creating Legacy Bot..." << endl;
         gen = 0;
       }
 

@@ -22,6 +22,10 @@ namespace grid {
     /**
      *  CLASS: grid_cell
      *  Most basic unit of the grid
+     *
+     *  Implements a mutex to prevent multiple botbots from
+     *  trying to occupy it (at most 2 botbots can interact over
+     *  a single grid_cell)
      */
     class grid_cell {
       int id;
@@ -80,11 +84,7 @@ namespace grid {
      */
     void initialize() {
       lg = new legacy_botbot();
-      cout << "Created " << lg->name() << endl;
-      lg->assign_gen(2);
-
       botizen_count = 0;
-      cout << "INITIALIZING GRID WITH DIM " << dim << endl;
 
       vector<grid_cell> row;
       for(int i=0; i<dim; ++i) {
@@ -125,7 +125,6 @@ namespace grid {
 
         bool ret;
         if(botizen_count == dim*dim || botizen_count == MAX_BOTBOTS) {
-          cout << "Cannot create a new botbot::full capacity" << endl;
           ret = false;
         }
         else {
