@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <pthread.h>
 
 using namespace std;
 
@@ -22,10 +23,10 @@ namespace bot_factory {
       virtual ~botbot() {}
 
       virtual string name() {
-        char namec[32] = {' '};
+        char namec[32] = {'\0'};
         sprintf(namec, "botbot_n%db%dgc%d-v%d", nuts, bolts, grid_cycles, gen);
         const char * cnamec = namec;
-        string ret(cnamec, 32);
+        string ret(cnamec);
         return ret;
       }
 
@@ -40,10 +41,15 @@ namespace bot_factory {
 
   class legacy_botbot : public botbot{
     int gen;
+    pthread_mutex_t gen_lock;
     public:
 
       legacy_botbot() {
         gen = 0;
+        pthread_mutex_init(&gen_lock, NULL);
+      }
+      ~legacy_botbot() {
+        pthread_mutex_destroy(&gen_lock);
       }
 
       string name() {
@@ -57,7 +63,10 @@ namespace bot_factory {
       }
 
       int increase_generations() {
-        return ++gen;
+        pthread_mutex_lock(&gen_lock);
+        ++gen;
+        pthread_mutex_unlock(&gen_lock);
+        return gen;
       }
 
       int generations() {

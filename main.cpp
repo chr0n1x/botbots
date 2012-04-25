@@ -13,12 +13,10 @@ int main(int argc, char ** argv) {
   grid::the_grid g(grid_dim);
   cout << "Grid cells: " << g.cell_count() << endl;
 
-  cout << "Randomly populating grid with botbots..." << endl << endl;
-  int count = 0;
-  while(g.create_botizen()) {
-    ++count;
-  }
+  cout << "Populating grid with botbots..." << endl << endl;
+  g.fill_to_capacity();
 
   g.print_to_console();
+  cout << g.botbot_count() << " botbots created" << endl;
   return 0;
 }
