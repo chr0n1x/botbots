@@ -1,7 +1,6 @@
 #ifndef __BOTFACTORY
 #define __BOTFACTORY
 
-#include <iostream>
 #include <string>
 #include <cstdlib>
 #include <pthread.h>

@@ -17,7 +17,7 @@ namespace grid {
   using namespace bot_factory;
 
   static const int DEFAULT_GRID_DIM = 10;
-  static const int MAX_BOTBOTS = 100;
+  static const int MAX_BOTBOTS = 25;
 
   void *_botbot_creation_thread(void *);
 
@@ -39,8 +39,15 @@ namespace grid {
  
       public:
 
+        grid_cell() {
+          bot = NULL;
+          id = 0;
+          row = 0;
+          col = 0;
+          pthread_mutex_init(&occupy_lock, NULL);
+        }
         ~grid_cell() {
-          if(bot) delete bot;
+          if(bot != NULL) delete bot;
           pthread_mutex_destroy(&occupy_lock);
         }
 
@@ -53,7 +60,6 @@ namespace grid {
             id = assigned_id;
             row = x;
             col = y;
-            return pthread_mutex_init(&occupy_lock, NULL);
           }
         }
 
@@ -70,12 +76,6 @@ namespace grid {
           if(bot == NULL) {
             bot = enterer;
           }
-          /*
-          else {
-            cout << "grid::grid_cell_" << id << "::initialize() -- FAIL" << endl;
-            cout << "\tOccupier::Bot_" << bot->name() << endl;
-          }
-          */
 
           pthread_mutex_unlock(&occupy_lock);
      
@@ -94,8 +94,9 @@ namespace grid {
      *  GRID FIELDS
      */
     vector<vector <grid_cell> > grid;
+    vector<botbot *> live_bots;
     legacy_botbot * lg;
-    pthread_mutex_t botbot_census_count_lock;
+    pthread_mutex_t population_flux_lock;
     int dim, botizen_count;
 
     /**
@@ -127,7 +128,13 @@ namespace grid {
         }
       }
 
-      pthread_mutex_init(&botbot_census_count_lock, NULL);
+      pthread_mutex_init(&population_flux_lock, NULL);
+    }
+
+    void add_botbot_to_list(botbot * bot) {
+      pthread_mutex_lock(&population_flux_lock);
+      live_bots.push_back(bot);
+      pthread_mutex_unlock(&population_flux_lock);
     }
 
     /**
@@ -135,9 +142,9 @@ namespace grid {
      *  It just seems right to surround this with a lock for now
      */
     void increment_population_count() {
-      pthread_mutex_lock(&botbot_census_count_lock);
+      pthread_mutex_lock(&population_flux_lock);
       ++botizen_count;
-      pthread_mutex_unlock(&botbot_census_count_lock);
+      pthread_mutex_unlock(&population_flux_lock);
     }
 
     /**
@@ -145,9 +152,9 @@ namespace grid {
      *  It just seems right to surround this with a lock for now
      */
     void decrement_population_count() {
-      pthread_mutex_lock(&botbot_census_count_lock);
+      pthread_mutex_lock(&population_flux_lock);
       --botizen_count;
-      pthread_mutex_unlock(&botbot_census_count_lock);
+      pthread_mutex_unlock(&population_flux_lock);
     }
 
     public:
@@ -160,8 +167,7 @@ namespace grid {
         this->initialize();
       }
       the_grid(int in_dim) {
-        if(in_dim < 5 || in_dim > 20) {
-          cout << "DIMENSIONS TOO LARGE FOR GRID, DEFAULTING TO " << DEFAULT_GRID_DIM << endl;
+        if(in_dim < 5) {
           in_dim = DEFAULT_GRID_DIM;
         }
         dim = in_dim;
@@ -169,7 +175,7 @@ namespace grid {
       }
       ~the_grid() {
         delete lg;
-        pthread_mutex_destroy(&botbot_census_count_lock);
+        pthread_mutex_destroy(&population_flux_lock);
       }
 
       /**
@@ -225,14 +231,12 @@ namespace grid {
           while(grid[x][y].get_botbot() != NULL);
 
           if(grid[x][y].initialize_bot(b)) {
-            //cout << "Initialized " << b->name() << endl;
             increment_population_count();
+            add_botbot_to_list(b);
             ret = true;
           }
           else {
-            //cout << "FAILED " << b->name() << endl;
             delete b;
-            //decrement_population_count();
             ret = false;
           }
         }
@@ -251,17 +255,50 @@ namespace grid {
       }
 
       /**
-       *  print_to_console()
-       *  Does what it says, says what it does
+       * to_string()
+       *
+       * Does what it says, says what it does...?
        */
-      void print_to_console() {
+      string to_string() {
+        string ret = "";
         for(int i=0; i<dim; ++i) {
           for(int j=0; j<dim; ++j) {
             string bot_name = grid[i][j].get_botbot() == NULL ? "No botbot" : grid[i][j].get_botbot()->name();
-            cout << "(" << i << "," << j << "): " << bot_name << "\t\t\t\t";
+
+            char coord[32];
+            sprintf(coord, "(%d,%d): ", i, j);
+            const char * coordc = coord;
+            string scoord = string(coordc);
+
+            ret += scoord;
+            ret += bot_name;
+
+            if(j != dim-1) 
+              ret += "\t";
           }
-          cout << endl << endl;
+          ret += "\t\t";
         }
+
+        return ret;
+      }
+
+      /**
+       *  population_to_string()
+       *  SAYS WHAT IT DOES, DEFINITELY DOES WHAT IT SAYS
+       */
+      string population_to_string() {
+        string ret = "";
+        if(live_bots.empty())
+          ret = "No botbots in grid";
+        else {
+          vector<botbot *>::iterator it = live_bots.begin();
+          for(it; it != live_bots.end(); ++it) {
+            ret += (*it)->name();
+            ret += "\n";
+          }
+        }
+
+        return ret;
       }
   };
 
