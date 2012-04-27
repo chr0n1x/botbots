@@ -15,9 +15,14 @@ int main(int argc, char ** argv) {
 
   cout << "Populating grid with botbots..." << endl << endl;
   g.fill_to_capacity();
-
   cout << g.to_string() << endl << endl;
   cout << g.botbot_count() << " botbots created" << endl;
+  cout << g.population_to_string() << endl;
+
+  g.initiate_cycle();
+
+  cout << endl << g.to_string() << endl << endl;
+  cout << g.botbot_count() << " botbots on board" << endl;
   cout << g.population_to_string() << endl;
   return 0;
 }

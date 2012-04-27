@@ -1,6 +1,7 @@
 #ifndef __BOTFACTORY
 #define __BOTFACTORY
 
+#include <iostream>
 #include <string>
 #include <cstdlib>
 #include <pthread.h>
@@ -16,6 +17,7 @@ namespace bot_factory {
    */
   class botbot {
     int nuts, bolts, gen, grid_cycles;
+    int current_col, current_row;
 
     public:
       /**
@@ -25,7 +27,9 @@ namespace bot_factory {
         srand( time(NULL) );
         nuts = rand() % 100;
         bolts = rand() % 100;
-        grid_cycles = rand() % 100;
+        grid_cycles = 0;
+        current_col = 0;
+        current_row = 0;
       }
       virtual ~botbot() {}
 
@@ -49,6 +53,48 @@ namespace bot_factory {
        */
       virtual void assign_gen(int in) {
         gen = in;
+      }
+
+      /**
+       *  set_current_cell()
+       *  Lets the botbot know exactly where he is
+       */
+      void set_current_cell(int row, int col) {
+        current_row = row;
+        current_col = col;
+      }
+
+      /**
+       *  decide_movement()
+       *  Given the current coordinates, the botbot thinks of an 
+       *  x and y that it wants to go to in the grid
+       */
+      void decide_movement() {
+        char arr[64];
+        sprintf(arr, "%s (%d, %d)", name().c_str(), current_row, current_col);
+        string str(arr);
+
+        int forward = rand() % 2;
+        forward = (forward) ? 1 : -1;
+        int hori = (rand() % 2) * forward;
+        current_col += hori;
+
+        forward = rand() % 2;
+        forward = (forward) ? 1 : -1;
+        int vert = (rand() % 2) * forward;
+        current_row += vert;
+
+        sprintf(arr, " --> (%d, %d)\n", current_row, current_col);
+        string str2(arr);
+        str += str2;
+        cout << str;
+      }
+
+      int get_col() {
+        return current_col;
+      }
+      int get_row() {
+        return current_row;
       }
   };
 
