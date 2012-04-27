@@ -209,6 +209,7 @@ namespace grid {
         }
       }
 
+
       /**
        *  create_botizen()
        *  Makes a botbot and throws it onto the grid
@@ -263,15 +264,11 @@ namespace grid {
         string ret = "";
         for(int i=0; i<dim; ++i) {
           for(int j=0; j<dim; ++j) {
-            string bot_name = grid[i][j].get_botbot() == NULL ? "No botbot" : grid[i][j].get_botbot()->name();
+            string bot_name = grid[i][j].get_botbot() == NULL ? "" : grid[i][j].get_botbot()->name();
 
-            char coord[32];
-            sprintf(coord, "(%d,%d): ", i, j);
-            const char * coordc = coord;
-            string scoord = string(coordc);
-
-            ret += scoord;
+            ret += "[";
             ret += bot_name;
+            ret += "]";
 
             if(j != dim-1) 
               ret += "\t";
