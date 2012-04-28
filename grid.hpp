@@ -1,24 +1,18 @@
 #ifndef __THEGRID
 #define __THEGRID
 
-#include <cstdlib>
-#include <ctime>
 #include <vector>
 #include <map>
-#include <iostream>
 
-#include <pthread.h>
-
+#include "botbot_internals.hpp"
 #include "botbot.hpp"
-
-using namespace std;
 
 namespace grid {
 
   using namespace bot_factory;
 
   static const int DEFAULT_GRID_DIM = 10;
-  static const int MAX_BOTBOTS = 50;
+  static const int MAX_BOTBOTS = 5;
 
   void *_botbot_creation_thread(void *);
   void *_botbot_decision_thread(void *);
@@ -81,7 +75,8 @@ namespace grid {
       }
 
       /**
-       *  botbot_died()
+       *  botbot_terminated()
+       *  Called if the botbot moves or dies
        */
       void botbot_terminated() {
         bot = NULL;
@@ -99,16 +94,14 @@ namespace grid {
       }
 
       /**
-       *  get_botbot()
+       * Getters
        */
       botbot * get_botbot() {
         return bot;
       }
-
       int get_row() {
         return row;
       }
-
       int get_col() {
         return col;
       }
@@ -172,7 +165,7 @@ namespace grid {
     /**
      *  cmd_decide_coordinates()
      *  Makes all botbots decide on a coordinate that they want to go to
-     *  The main thread halts for this process
+     *  This halts the main thread
      */
     bool cmd_decide_coordinates() {
       int thread_ret;
@@ -196,23 +189,27 @@ namespace grid {
 
     /**
      *  cmd_goto_coordinates()
-     *  All botbots attempt to move to their desired coordinates, if stored.
+     *
+     *  cmd_decide_coordinates() should be called before this
+     *  so that the botbots have desired coordinates to go to
+     *
+     *  All botbots attempt to move to their desired coordinates
      *  Otherwise, they do not move...?
      *  The main thread halts for this process
      */
     void cmd_goto_coordinates() {
-
+      // go through each grid_cell
       for(int i=0; i<dim; ++i) {
         for(int j=0; j<dim; ++j) {
-
           botbot * bot = grid[i][j].get_botbot();
-          if(bot != NULL) {
 
+          if(bot != NULL) {
+            // case where the bot tries to go out of the grid
+            // dirty traitors...
             bool out_of_bounds = (bot->get_col() < 0 || bot->get_col() >= dim);
             out_of_bounds = out_of_bounds || (bot->get_row() < 0 || bot->get_row() >= dim);
 
             if(out_of_bounds) {
-              //cout << "deleting " << bot->name() << endl;
               live_bots[bot]->botbot_terminated();
               live_bots.erase(bot);
               delete bot;
@@ -222,47 +219,33 @@ namespace grid {
               grid_cell * to_cell = &grid[bot->get_row()][bot->get_col()];
               botbot * occupying_bot = to_cell->get_botbot();
 
+              // there is no botbot in the cell that this botbot wants to go to
+              // this is procedural so it's guaranteed that there will be no
+              // botbot, nor will there be a botbot trying to simultaneously
+              // acquire the cell...yet
               if(occupying_bot == NULL) {
+                // attempt to initialize cell with botbot
                 if(to_cell->initialize_bot(bot)) {
                   from_cell->botbot_terminated();
                   live_bots[bot] = to_cell;
                 }
                 else {
+                  cout << "DELETING " << bot->name() << endl;
                   from_cell->botbot_terminated();
                   to_cell->botbot_terminated();
                   delete bot;
-                  decrement_population_count();
                 }
               }
+              // there is another botbot here -- 
+              // reset the bot to its original cell
               else {
                 bot->set_current_cell(i, j);
               }
             }
           }
-
         }
       }
-
-    }
-
-    /**
-     *  increment_population_count()
-     *  It just seems right to surround this with a lock for now
-     */
-    void increment_population_count() {
-      pthread_mutex_lock(&population_flux_lock);
-      ++botizen_count;
-      pthread_mutex_unlock(&population_flux_lock);
-    }
-
-    /**
-     *  decrement_population_count()
-     *  It just seems right to surround this with a lock for now
-     */
-    void decrement_population_count() {
-      pthread_mutex_lock(&population_flux_lock);
-      --botizen_count;
-      pthread_mutex_unlock(&population_flux_lock);
+      // end of loop
     }
 
     public:
@@ -337,7 +320,6 @@ namespace grid {
 
           if(grid[x][y].initialize_bot(b)) {
             b->set_current_cell(x, y);
-            increment_population_count();
             add_botbot_to_list(b, &grid[x][y]);
             ret = true;
           }
