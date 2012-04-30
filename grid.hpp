@@ -12,7 +12,7 @@ namespace grid {
   using namespace bot_factory;
 
   static const int DEFAULT_GRID_DIM = 10;
-  static const int MAX_BOTBOTS = 5;
+  static const int MAX_BOTBOTS = 25;
 
   void *_botbot_creation_thread(void *);
   void *_botbot_decision_thread(void *);
