@@ -2,6 +2,8 @@
 #define __INTERNALHEADERS
 
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <cstdio>
 #include <cstdlib>

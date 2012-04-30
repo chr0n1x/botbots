@@ -11,8 +11,8 @@ namespace grid {
 
   using namespace bot_factory;
 
-  static const int DEFAULT_GRID_DIM = 10;
-  static const int MAX_BOTBOTS = 25;
+  static const int DEFAULT_GRID_DIM = 8;
+  static const int MAX_BOTBOTS = 10;
 
   void *_botbot_creation_thread(void *);
   void *_botbot_decision_thread(void *);
@@ -230,7 +230,6 @@ namespace grid {
                   live_bots[bot] = to_cell;
                 }
                 else {
-                  cout << "DELETING " << bot->name() << endl;
                   from_cell->botbot_terminated();
                   to_cell->botbot_terminated();
                   delete bot;
@@ -360,22 +359,36 @@ namespace grid {
        * Does what it says, says what it does...?
        */
       string to_string() {
-        string ret = "";
-        for(int i=0; i<dim; ++i) {
-          for(int j=0; j<dim; ++j) {
-            string bot_name = grid[i][j].get_botbot() == NULL ? "" : grid[i][j].get_botbot()->name();
+        if(live_bots.size() > 0) {
+          int line_width = ((live_bots.begin()->first->name()).length()) / dim;
+          string empt = "                    ";
 
-            ret += "[";
-            ret += bot_name;
-            ret += "]";
+          stringstream buffer;
+          streambuf * def = cout.rdbuf(buffer.rdbuf());
 
-            if(j != dim-1) 
-              ret += "\t ";
+          for(int i=0; i<dim; ++i) {
+
+            for(int j=0; j<dim; ++j) {
+              botbot * bot = grid[i][j].get_botbot();
+              string bot_name = (bot == NULL || bot == 0) ? empt : grid[i][j].get_botbot()->name();
+
+              if(bot_name.length() !=  empt.length()) {
+                long long int diff = empt.length() - bot_name.length();
+                int other_diff = abs(diff);
+                bot_name += empt.substr(0, diff);
+              }
+              cout << setfill(' ') << setw(line_width);
+              cout << '[' << bot_name << ']';
+            }
+            cout << endl;
           }
-          ret += "\n";
-        }
+          cout << endl << "----- " << live_bots.size() << " BotBots Online -----" << endl << population_to_string() << endl;
 
-        return ret;
+          string ret = buffer.str();
+          cout.rdbuf(def);
+          return ret;
+        }
+        return "ALL BOTBOTS DIED\n";
       }
 
       /**
@@ -407,7 +420,8 @@ namespace grid {
    */
   void *_botbot_creation_thread(void * arg) {
     the_grid * grid = (the_grid*) arg;
-    bool res = grid->create_botizen();
+    if(grid != NULL)
+      bool res = grid->create_botizen();
     return NULL;
   }
 
@@ -417,7 +431,8 @@ namespace grid {
    */
   void *_botbot_decision_thread(void * arg) {
     botbot * bot = (botbot*) arg;
-    bot->decide_movement();
+    if(bot != NULL)
+      bot->decide_movement();
     return NULL;
   }
 
