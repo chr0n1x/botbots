@@ -1,7 +1,7 @@
 #ifndef __BOTFACTORY
 #define __BOTFACTORY
 
-#include "botbot_internals.hpp"
+#include "internals.hpp"
 
 namespace bot_factory {
 
