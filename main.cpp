@@ -22,7 +22,7 @@ int main(int argc, char ** argv) {
   g.fill_to_capacity();
 
   initscr();
-  while(g.botbot_count() > 0 && c != 'q') {
+  while(g.botbot_count() > 0) {
     erase();
     g.initiate_cycle();
     printw(g.to_string().c_str());

@@ -132,8 +132,7 @@ namespace grid {
       lg = new legacy_botbot();
       cycles_passed = 0;
 
-      int botbots_for_grid = rows*cols / 5;
-      MAX_BOTBOTS = (botbots_for_grid < MAX_BOTBOTS) ? botbots_for_grid : 15;
+      MAX_BOTBOTS = rows*cols / 5;
 
       vector<grid_cell> row;
       for(int i=0; i<rows; ++i) {
@@ -317,7 +316,7 @@ namespace grid {
       bool create_botizen() {
 
         bool ret;
-        if(live_bots.size() == rows*cols || live_bots.size() == MAX_BOTBOTS) {
+        if(live_bots.size() == rows*cols || live_bots.size() >= MAX_BOTBOTS) {
           ret = false;
         }
         else {
@@ -347,6 +346,7 @@ namespace grid {
 
       /**
        *  initiate_cycle()
+       *  STEP 0: increment the number of cycles
        *  STEP 1: have all botbots decide where they want to go
        *  STEP 2: make them all attempt to move
        *

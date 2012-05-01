@@ -65,12 +65,6 @@ namespace bot_factory {
        *  x and y that it wants to go to in the grid
        */
       void decide_movement() {
-        /*
-        char arr[64];
-        sprintf(arr, "%s (%d, %d)", name().c_str(), current_row, current_col);
-        string str(arr);
-        */
-
         int forward = rand() % 2;
         forward = (forward) ? 1 : -1;
         int hori = (rand() % 2) * forward;
@@ -80,13 +74,6 @@ namespace bot_factory {
         forward = (forward) ? 1 : -1;
         int vert = (rand() % 2) * forward;
         current_row += vert;
-
-        /*
-        sprintf(arr, " --> (%d, %d)\n", current_row, current_col);
-        string str2(arr);
-        str += str2;
-        cout << str;
-        */
       }
 
       int get_col() {
