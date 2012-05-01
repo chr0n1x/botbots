@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 #include <ncurses.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 using namespace std;
 
@@ -27,7 +27,6 @@ int main(int argc, char ** argv) {
     g.initiate_cycle();
     printw(g.to_string().c_str());
     refresh();
-    sleep(1);
   }
 
   endwin();

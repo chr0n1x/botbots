@@ -12,7 +12,7 @@ namespace grid {
   using namespace bot_factory;
 
   static const int DEFAULT_GRID_DIM = 8;
-  static const int MAX_BOTBOTS = 10;
+  static int MAX_BOTBOTS = DEFAULT_GRID_DIM * DEFAULT_GRID_DIM / 2;
 
   void *_botbot_creation_thread(void *);
   void *_botbot_decision_thread(void *);
@@ -258,10 +258,12 @@ namespace grid {
         this->initialize();
       }
       the_grid(int in_rows, int in_cols) {
-        if(in_rows < 5) {
+        if(in_rows < DEFAULT_GRID_DIM) {
           in_rows = DEFAULT_GRID_DIM;
         }
         rows = in_rows;
+
+        MAX_BOTBOTS = rows * cols;
 
         if(in_cols < 5) {
           in_cols = DEFAULT_GRID_DIM;
