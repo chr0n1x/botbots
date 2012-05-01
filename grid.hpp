@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-#include "botbot_internals.hpp"
+#include "internals.hpp"
 #include "botbot.hpp"
 
 namespace grid {
