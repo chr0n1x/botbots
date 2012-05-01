@@ -356,6 +356,7 @@ namespace grid {
         ++cycles_passed;
         cmd_decide_coordinates();
         cmd_goto_coordinates();
+        sleep(1);
       }
 
       /**

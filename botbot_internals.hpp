@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <pthread.h>
+#include <unistd.h>
 
 using namespace std;
 
