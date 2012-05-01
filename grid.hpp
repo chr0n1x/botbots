@@ -116,7 +116,7 @@ namespace grid {
     map<botbot*, grid_cell*> live_bots;
     legacy_botbot * lg;
     pthread_mutex_t population_flux_lock;
-    int rows, cols;
+    int rows, cols, cycles_passed;
 
     /**
      *  PRIVATE FUNCTIONS
@@ -130,6 +130,7 @@ namespace grid {
      */
     void initialize() {
       lg = new legacy_botbot();
+      cycles_passed = 0;
 
       vector<grid_cell> row;
       for(int i=0; i<rows; ++i) {
@@ -345,6 +346,7 @@ namespace grid {
        *  botbots settle their own disputes
        */
       bool initiate_cycle() {
+        ++cycles_passed;
         cmd_decide_coordinates();
         cmd_goto_coordinates();
       }
@@ -357,6 +359,9 @@ namespace grid {
       }
       int botbot_count() {
         return live_bots.size();
+      }
+      int grid_cycles() {
+        return cycles_passed;
       }
 
       /**
@@ -386,9 +391,10 @@ namespace grid {
               cout << setfill(' ') << setw(line_width);
               cout << '[' << bot_name << ']';
             }
-            cout << endl;
+            cout << endl << endl;
           }
-          cout << endl << "----- " << live_bots.size() << " BotBots Online -----" << endl << population_to_string() << endl;
+          cout << endl << "----- " << live_bots.size() << " BotBots Online (" << cycles_passed << " Cycles) -----";
+          cout << endl << population_to_string() << endl;
 
           string ret = buffer.str();
           cout.rdbuf(def);
