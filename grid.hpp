@@ -402,7 +402,7 @@ namespace grid {
             cout << endl << endl;
           }
           cout << endl << "----- " << live_bots.size() << " BotBots Online (" << cycles_passed << " Cycles) -----";
-          cout << endl << population_to_string() << endl;
+          cout << endl << endl << population_to_string() << endl;
 
           string ret = buffer.str();
           cout.rdbuf(def);
@@ -421,11 +421,16 @@ namespace grid {
           ret = "No botbots in grid";
         else {
           map<botbot*, grid_cell*>::iterator it = live_bots.begin();
-          for(it; it != live_bots.end(); ++it) {
+          int col = 0;
+          for(it; it != live_bots.end(); ++it, ++col) {
             ret += it->second->coordinates();
             ret += "\t\t";
             ret += it->first->name();
-            ret += "\n";
+
+            if(col % 3 == 0 && col > 0)
+              ret += "\n";
+            else
+              ret += "\t\t";
           }
         }
 
