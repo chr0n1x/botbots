@@ -18,17 +18,17 @@ int main(int argc, char ** argv) {
     grid_cols = atoi(argv[2]);
   }
   grid::the_grid g(grid_rows, grid_cols);
+  cout << "Initializing Grid..." << endl;
+  g.fill_to_capacity();
 
   initscr();
-
-  g.fill_to_capacity();
-  while(g.botbot_count() > 0) {
+  while(g.botbot_count() > 0 && c != 'q') {
     erase();
     g.initiate_cycle();
     printw(g.to_string().c_str());
     refresh();
+    sleep(1);
   }
-
   endwin();
 
   return 0;

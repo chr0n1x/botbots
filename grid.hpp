@@ -12,7 +12,6 @@ namespace grid {
   using namespace bot_factory;
 
   static const int DEFAULT_GRID_DIM = 8;
-  static int MAX_BOTBOTS = DEFAULT_GRID_DIM * DEFAULT_GRID_DIM / 2;
 
   void *_botbot_creation_thread(void *);
   void *_botbot_decision_thread(void *);
@@ -112,6 +111,7 @@ namespace grid {
     /**
      *  GRID FIELDS
      */
+    int MAX_BOTBOTS;
     vector<vector <grid_cell> > grid;
     map<botbot*, grid_cell*> live_bots;
     legacy_botbot * lg;
@@ -131,6 +131,9 @@ namespace grid {
     void initialize() {
       lg = new legacy_botbot();
       cycles_passed = 0;
+
+      int botbots_for_grid = rows*cols / 5;
+      MAX_BOTBOTS = (botbots_for_grid < MAX_BOTBOTS) ? botbots_for_grid : 15;
 
       vector<grid_cell> row;
       for(int i=0; i<rows; ++i) {
@@ -210,9 +213,7 @@ namespace grid {
             out_of_bounds = out_of_bounds || (bot->get_row() < 0 || bot->get_row() >= rows);
 
             if(out_of_bounds) {
-              live_bots[bot]->botbot_terminated();
-              live_bots.erase(bot);
-              delete bot;
+              bot->set_current_cell(i, j);
             }
             else {
               grid_cell * from_cell = live_bots[bot];
@@ -224,6 +225,10 @@ namespace grid {
               // botbot, nor will there be a botbot trying to simultaneously
               // acquire the cell...yet
               if(occupying_bot == NULL) {
+                grid_cell * from_cell = live_bots[bot];
+                grid_cell * to_cell = &grid[bot->get_row()][bot->get_col()];
+                botbot * occupying_bot = to_cell->get_botbot();
+
                 // attempt to initialize cell with botbot
                 if(to_cell->initialize_bot(bot)) {
                   from_cell->botbot_terminated();
@@ -257,13 +262,12 @@ namespace grid {
         cols = DEFAULT_GRID_DIM;
         this->initialize();
       }
+
       the_grid(int in_rows, int in_cols) {
         if(in_rows < DEFAULT_GRID_DIM) {
           in_rows = DEFAULT_GRID_DIM;
         }
         rows = in_rows;
-
-        MAX_BOTBOTS = rows * cols;
 
         if(in_cols < 5) {
           in_cols = DEFAULT_GRID_DIM;
@@ -272,6 +276,7 @@ namespace grid {
 
         this->initialize();
       }
+
       ~the_grid() {
         delete lg;
         pthread_mutex_destroy(&population_flux_lock);
