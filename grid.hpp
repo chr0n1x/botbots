@@ -116,7 +116,7 @@ namespace grid {
     map<botbot*, grid_cell*> live_bots;
     legacy_botbot * lg;
     pthread_mutex_t population_flux_lock;
-    int rows, cols, botizen_count;
+    int rows, cols;
 
     /**
      *  PRIVATE FUNCTIONS
@@ -130,7 +130,6 @@ namespace grid {
      */
     void initialize() {
       lg = new legacy_botbot();
-      botizen_count = 0;
 
       vector<grid_cell> row;
       for(int i=0; i<rows; ++i) {
@@ -281,7 +280,7 @@ namespace grid {
        *  Returns a boolean based on success or failure
        */
       bool fill_to_capacity() {
-        if(botizen_count >= MAX_BOTBOTS)
+        if(live_bots.size() >= MAX_BOTBOTS)
           return false;
         else {
           // create threads
@@ -357,7 +356,7 @@ namespace grid {
         return rows*cols;
       }
       int botbot_count() {
-        return live_bots.size();//botizen_count;
+        return live_bots.size();
       }
 
       /**
