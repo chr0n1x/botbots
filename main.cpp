@@ -10,11 +10,14 @@ using namespace std;
 
 int main(int argc, char ** argv) {
 
-  int grid_dim = 8;
-  if(argc > 1) {
-    grid_dim = atoi(argv[1]);
+  int grid_rows = 0;
+  int grid_cols = 0;
+
+  if(argc == 3) {
+    grid_rows = atoi(argv[1]);
+    grid_cols = atoi(argv[2]);
   }
-  grid::the_grid g(grid_dim);
+  grid::the_grid g(grid_rows, grid_cols);
 
   initscr();
 

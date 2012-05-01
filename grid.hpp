@@ -116,7 +116,7 @@ namespace grid {
     map<botbot*, grid_cell*> live_bots;
     legacy_botbot * lg;
     pthread_mutex_t population_flux_lock;
-    int dim, botizen_count;
+    int rows, cols, botizen_count;
 
     /**
      *  PRIVATE FUNCTIONS
@@ -133,14 +133,14 @@ namespace grid {
       botizen_count = 0;
 
       vector<grid_cell> row;
-      for(int i=0; i<dim; ++i) {
+      for(int i=0; i<rows; ++i) {
         grid.push_back(row);
       }
 
       grid_cell base_cell;
       int cell_count = 0;
-      for(int i=0; i<dim; ++i) {
-        for(int j=0; j<dim; ++j) {
+      for(int i=0; i<rows; ++i) {
+        for(int j=0; j<cols; ++j) {
           grid[i].push_back(base_cell);
           grid[i][j].initialize(cell_count, i, j);
           ++cell_count;
@@ -199,15 +199,15 @@ namespace grid {
      */
     void cmd_goto_coordinates() {
       // go through each grid_cell
-      for(int i=0; i<dim; ++i) {
-        for(int j=0; j<dim; ++j) {
+      for(int i=0; i<rows; ++i) {
+        for(int j=0; j<cols; ++j) {
           botbot * bot = grid[i][j].get_botbot();
 
           if(bot != NULL) {
             // case where the bot tries to go out of the grid
             // dirty traitors...
-            bool out_of_bounds = (bot->get_col() < 0 || bot->get_col() >= dim);
-            out_of_bounds = out_of_bounds || (bot->get_row() < 0 || bot->get_row() >= dim);
+            bool out_of_bounds = (bot->get_col() < 0 || bot->get_col() >= cols);
+            out_of_bounds = out_of_bounds || (bot->get_row() < 0 || bot->get_row() >= rows);
 
             if(out_of_bounds) {
               live_bots[bot]->botbot_terminated();
@@ -253,14 +253,21 @@ namespace grid {
        *  default and explicit constructors, destructor
        */
       the_grid() {
-        dim = DEFAULT_GRID_DIM;
+        rows = DEFAULT_GRID_DIM;
+        cols = DEFAULT_GRID_DIM;
         this->initialize();
       }
-      the_grid(int in_dim) {
-        if(in_dim < 5) {
-          in_dim = DEFAULT_GRID_DIM;
+      the_grid(int in_rows, int in_cols) {
+        if(in_rows < 5) {
+          in_rows = DEFAULT_GRID_DIM;
         }
-        dim = in_dim;
+        rows = in_rows;
+
+        if(in_cols < 5) {
+          in_cols = DEFAULT_GRID_DIM;
+        }
+        cols = in_cols;
+
         this->initialize();
       }
       ~the_grid() {
@@ -303,7 +310,7 @@ namespace grid {
       bool create_botizen() {
 
         bool ret;
-        if(botizen_count == dim*dim || botizen_count == MAX_BOTBOTS) {
+        if(live_bots.size() == rows*cols || live_bots.size() == MAX_BOTBOTS) {
           ret = false;
         }
         else {
@@ -312,8 +319,8 @@ namespace grid {
           int x, y;
           do {
             srand( time(NULL) );
-            x = rand() % dim;
-            y = rand() % dim;
+            x = rand() % rows;
+            y = rand() % cols;
           }
           while(grid[x][y].get_botbot() != NULL);
 
@@ -347,7 +354,7 @@ namespace grid {
        * Getters
        */
       int cell_count() {
-        return dim*dim;
+        return rows*cols;
       }
       int botbot_count() {
         return live_bots.size();//botizen_count;
@@ -360,15 +367,15 @@ namespace grid {
        */
       string to_string() {
         if(live_bots.size() > 0) {
-          int line_width = ((live_bots.begin()->first->name()).length()) / dim;
+          int line_width = ((live_bots.begin()->first->name()).length()) / cols;
           string empt = "                    ";
 
           stringstream buffer;
           streambuf * def = cout.rdbuf(buffer.rdbuf());
 
-          for(int i=0; i<dim; ++i) {
+          for(int i=0; i<rows; ++i) {
 
-            for(int j=0; j<dim; ++j) {
+            for(int j=0; j<cols; ++j) {
               botbot * bot = grid[i][j].get_botbot();
               string bot_name = (bot == NULL || bot == 0) ? empt : grid[i][j].get_botbot()->name();
 
