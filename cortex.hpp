@@ -84,7 +84,7 @@ namespace the_cortex {
     /**
      *  FIELDS
      */
-    ts_queue pipe;
+    ts_queue gate;
 
     /**
      *  queue_object
@@ -93,7 +93,7 @@ namespace the_cortex {
      */
     template <typename _obj>
     void queue_object(specialized_cortex_object<_obj> co) {
-      pipe.push(co);
+      gate.push(co);
  
       // logic to start task processing
     }
@@ -116,9 +116,9 @@ namespace the_cortex {
        *  Goes through the entire queue, processing all tasks 1 by 1
        */
       void process_queue_iteratively() {
-        while(pipe.size() > 0) {
-          pipe.front().execute();
-          pipe.pop();
+        while(gate.size() > 0) {
+          gate.front().execute();
+          gate.pop();
         }
       }
   };
