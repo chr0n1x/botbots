@@ -3,6 +3,8 @@
 
 #include <queue>
 
+#include "internals.hpp"
+
 namespace the_cortex {
 
   static const int MAX_CORTEX_THREADS = 4;
@@ -19,7 +21,6 @@ namespace the_cortex {
      *  Most basic unit of the cortex
      */
     struct cortex_object {
-      // fields
       void* (*worker_function)(void*);
       void* object;
 
@@ -35,7 +36,6 @@ namespace the_cortex {
      */
     template <typename _obj>
     struct specialized_cortex_object : public cortex_object {
-      // constructor
       specialized_cortex_object(_obj* iobj, void* (*ifunc)(void*)) {
         worker_function = ifunc;
         object = (void*) iobj;
@@ -86,7 +86,13 @@ namespace the_cortex {
      */
     ts_queue pipe;
 
-    void queue_object(cortex_object co) {
+    /**
+     *  queue_object
+     *  Adds a specialized cortex object to the queue
+     *  and starts processing if possible
+     */
+    template <typename _obj>
+    void queue_object(specialized_cortex_object<_obj> co) {
       pipe.push(co);
  
       // logic to start task processing
