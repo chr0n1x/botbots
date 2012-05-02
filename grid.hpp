@@ -15,8 +15,8 @@ namespace grid {
 
   static const int DEFAULT_GRID_DIM = 8;
 
-  void *_botbot_creation_thread(void *);
-  void *_botbot_decision_thread(void *);
+  void *_botbot_creation_thread(void*);
+  void *_botbot_decision_thread(void*);
 
   /**
    *  CLASS: grid_cell
@@ -29,7 +29,7 @@ namespace grid {
   class grid_cell {
     int id;
     int row, col;
-    botbot * bot;
+    botbot* bot;
     pthread_mutex_t occupy_lock;
 
     public:
@@ -64,7 +64,7 @@ namespace grid {
        *  given a botbot, locks the cell and attempts to place
        *  the botbot into it
        */
-      int initialize_bot(botbot * enterer) {
+      int initialize_bot(botbot* enterer) {
 
         pthread_mutex_lock(&occupy_lock);
         if(bot == NULL) {
@@ -97,7 +97,7 @@ namespace grid {
       /**
        * Getters
        */
-      botbot * get_botbot() {
+      botbot* get_botbot() {
         return bot;
       }
       int get_row() {
@@ -116,7 +116,7 @@ namespace grid {
     vector<vector <grid_cell> > grid;
     map<botbot*, grid_cell*> live_bots;
 
-    legacy_botbot * lg;
+    legacy_botbot* lg;
     pthread_mutex_t population_flux_lock;
 
     int MAX_BOTBOTS;
@@ -162,7 +162,7 @@ namespace grid {
      *  When botbots move, the goto function will handle keeping track of
      *  all that
      */
-    void add_botbot_to_list(botbot * bot, grid_cell * cell) {
+    void add_botbot_to_list(botbot* bot, grid_cell* cell) {
       pthread_mutex_lock(&population_flux_lock);
       live_bots.insert( pair<botbot*, grid_cell*>(bot, cell) );
       pthread_mutex_unlock(&population_flux_lock);
@@ -219,19 +219,15 @@ namespace grid {
               bot->set_current_cell(i, j);
             }
             else {
-              grid_cell * from_cell = live_bots[bot];
-              grid_cell * to_cell = &grid[bot->get_row()][bot->get_col()];
-              botbot * occupying_bot = to_cell->get_botbot();
+              grid_cell* from_cell = live_bots[bot];
+              grid_cell* to_cell = &grid[bot->get_row()][bot->get_col()];
+              botbot* occupying_bot = to_cell->get_botbot();
 
               // there is no botbot in the cell that this botbot wants to go to
               // this is procedural so it's guaranteed that there will be no
               // botbot, nor will there be a botbot trying to simultaneously
               // acquire the cell...yet
               if(occupying_bot == NULL) {
-                grid_cell * from_cell = live_bots[bot];
-                grid_cell * to_cell = &grid[bot->get_row()][bot->get_col()];
-                botbot * occupying_bot = to_cell->get_botbot();
-
                 // attempt to initialize cell with botbot
                 if(to_cell->initialize_bot(bot)) {
                   from_cell->botbot_terminated();
@@ -324,7 +320,7 @@ namespace grid {
           ret = false;
         }
         else {
-          botbot * b = new botbot();
+          botbot* b = new botbot();
           b->assign_gen(lg->increase_generations());
           int x, y;
           do {
@@ -392,7 +388,7 @@ namespace grid {
           for(int i=0; i<rows; ++i) {
 
             for(int j=0; j<cols; ++j) {
-              botbot * bot = grid[i][j].get_botbot();
+              botbot* bot = grid[i][j].get_botbot();
               string bot_name = (bot == NULL || bot == 0) ? empt : grid[i][j].get_botbot()->name();
 
               if(bot_name.length() !=  empt.length()) {
@@ -447,7 +443,7 @@ namespace grid {
    *  function intended to be used as a thread only!
    *  used in fill_to_capacity()
    */
-  void *_botbot_creation_thread(void * arg) {
+  void *_botbot_creation_thread(void* arg) {
     the_grid * grid = (the_grid*) arg;
     if(grid != NULL)
       bool res = grid->create_botizen();
@@ -458,7 +454,7 @@ namespace grid {
    *  _botbot_decision_thread()
    *  There has to be a better way to do this...
    */
-  void *_botbot_decision_thread(void * arg) {
+  void *_botbot_decision_thread(void* arg) {
     botbot * bot = (botbot*) arg;
     if(bot != NULL)
       bot->decide_movement();

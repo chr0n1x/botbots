@@ -20,8 +20,8 @@ namespace the_cortex {
      */
     struct cortex_object {
       // fields
-      void * (*worker_function)(void*);
-      void * object;
+      void* (*worker_function)(void*);
+      void* object;
 
       void execute() {
         (*worker_function)(object);
@@ -100,7 +100,7 @@ namespace the_cortex {
        *  create a cortex_object and push it into the queue
        */
       template <typename _obj>
-      void queue_task( _obj * object, void* (*thread_func)(void*) ) {
+      void queue_task( _obj* object, void* (*thread_func)(void*) ) {
         specialized_cortex_object<_obj> sco(object, thread_func);
         queue_object(sco);
       }
