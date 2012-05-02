@@ -6,9 +6,11 @@
 
 #include "internals.hpp"
 #include "botbot.hpp"
+#include "cortex.hpp"
 
 namespace grid {
 
+  using namespace the_cortex;
   using namespace bot_factory;
 
   static const int DEFAULT_GRID_DIM = 8;
@@ -111,11 +113,13 @@ namespace grid {
     /**
      *  GRID FIELDS
      */
-    int MAX_BOTBOTS;
     vector<vector <grid_cell> > grid;
     map<botbot*, grid_cell*> live_bots;
+
     legacy_botbot * lg;
     pthread_mutex_t population_flux_lock;
+
+    int MAX_BOTBOTS;
     int rows, cols, cycles_passed;
 
     /**
