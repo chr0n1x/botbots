@@ -38,11 +38,13 @@ int main() {
   foo f;
   bar b;
 
-  cortex<object> c;
+  cortex c;
 
-  c.queue_task(&f, _threaded_a);
-  c.queue_task(&f, _threaded_b);
+  c.queue_task(&f, &_threaded_a);
+  c.queue_task(&f, &_threaded_b);
 
-  c.queue_task(&b, _threaded_a);
-  c.queue_task(&b, _threaded_b);
+  c.queue_task(&b, &_threaded_a);
+  c.queue_task(&b, &_threaded_b);
+
+  c.process_queue_iteratively();
 }

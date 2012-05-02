@@ -2,34 +2,53 @@
 #define __CORTEX
 
 #include <queue>
-#include <map>
 
 namespace the_cortex {
+
+  static const int MAX_CORTEX_THREADS = 4;
 
   /**
    *  CLASS: cortex
    *  Implementation of a thread pool using a thread
    *  safe queue
    */
-  template <typename _obj>
   class cortex {
 
     /**
-     *  CLASS: cortex_object
+     *  STRUCT: cortex_object
+     *  Most basic unit of the cortex
+     */
+    struct cortex_object {
+      // fields
+      void * (*worker_function)(void*);
+      void * object;
+
+      void execute() {
+        (*worker_function)(object);
+      }
+    };
+
+    /**
+     *  STRUCT: specialized_cortex_object
      *  "Atomic" units that are queued for the worker threads
      *  to process
      */
-    class cortex_object {
-      void* (worker_function)(void*);
-      _obj * object;
+    template <typename _obj>
+    struct specialized_cortex_object : public cortex_object {
+      // constructor
+      specialized_cortex_object(_obj* iobj, void* (*ifunc)(void*)) {
+        worker_function = ifunc;
+        object = (void*) iobj;
+      }
     };
 
     /**
      *  CLASS: ts_queue
      *  class wrapper to make the container thread safe
      */
-    class ts_queue : public queue<_obj> {
-      queue<_obj> que;
+    class ts_queue {
+
+      queue<cortex_object> que;
       pthread_mutex_t queue_lock;
 
       public:
@@ -41,7 +60,7 @@ namespace the_cortex {
           pthread_mutex_destroy(&queue_lock);
         }
 
-        void push(const _obj& x) {
+        void push(const cortex_object &x) {
           pthread_mutex_lock(&queue_lock);
           que.push(x);
           pthread_mutex_unlock(&queue_lock);
@@ -52,16 +71,49 @@ namespace the_cortex {
           que.pop();
           pthread_mutex_unlock(&queue_lock);
         }
+
+        cortex_object & front() {
+          return que.front();
+        }
+
+        int size() {
+          return que.size();
+        }
     };
+
+    /**
+     *  FIELDS
+     */
+    ts_queue pipe;
+
+    void queue_object(cortex_object co) {
+      pipe.push(co);
+ 
+      // logic to start task processing
+    }
 
     public:
 
       /**
-       *
+       *  queue_task
+       *  Given a function pointer and the argument that it requires,
+       *  create a cortex_object and push it into the queue
        */
-      void queue_task(_obj* object, void* (thread_func)(void*) ) {
-        void * arg = (void*) object;
-        thread_func(arg);
+      template <typename _obj>
+      void queue_task( _obj * object, void* (*thread_func)(void*) ) {
+        specialized_cortex_object<_obj> sco(object, thread_func);
+        queue_object(sco);
+      }
+
+      /**
+       *  process_queue_iteratively
+       *  Goes through the entire queue, processing all tasks 1 by 1
+       */
+      void process_queue_iteratively() {
+        while(pipe.size() > 0) {
+          pipe.front().execute();
+          pipe.pop();
+        }
       }
   };
 
