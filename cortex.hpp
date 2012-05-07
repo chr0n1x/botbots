@@ -8,6 +8,7 @@
 namespace the_cortex {
 
   static const int MAX_CORTEX_THREADS = 4;
+  void* _cortex_thread(void*);
 
   /**
    *  CLASS: cortex
@@ -24,8 +25,14 @@ namespace the_cortex {
       void* (*worker_function)(void*);
       void* object;
 
+      void operator=(cortex_object& in) {
+        worker_function = in.worker_function;
+        object = in.object;
+      }
+
       void execute() {
-        (*worker_function)(object);
+        if(worker_function && object)
+          (*worker_function)(object);
       }
     };
 
@@ -66,14 +73,41 @@ namespace the_cortex {
           pthread_mutex_unlock(&queue_lock);
         }
 
+        /*
         void pop() {
           pthread_mutex_lock(&queue_lock);
-          que.pop();
-          pthread_mutex_unlock(&queue_lock);
+
+          if(que.size() > 0) {
+            que.pop();
+            pthread_mutex_unlock(&queue_lock);
+          }
         }
 
-        cortex_object & front() {
+        cortex_object& front() {
           return que.front();
+        }
+        */
+
+        cortex_object front_pop() {
+          pthread_mutex_lock(&queue_lock);
+
+          cortex_object ret;
+          // make sure that there are objects in the queue
+          if(que.size() > 0) {
+            // get the front as a copy, pop it off
+            ret = que.front();
+            que.pop();
+          }
+          // nothing in the queue; unlock the mutex, yield CPU
+          // time to another thread (maybe the main to queue up objects)
+          else {
+            pthread_mutex_unlock(&queue_lock);
+            //pthread_yield();
+            sched_yield();
+          }
+
+          pthread_mutex_unlock(&queue_lock);
+          return ret;
         }
 
         int size() {
@@ -85,6 +119,9 @@ namespace the_cortex {
      *  FIELDS
      */
     ts_queue gate;
+    pthread_t workers[MAX_CORTEX_THREADS];
+    pthread_mutex_t gate_process_lock;
+    int workers_running;
 
     /**
      *  queue_object
@@ -94,11 +131,26 @@ namespace the_cortex {
     template <typename _obj>
     void queue_object(specialized_cortex_object<_obj> co) {
       gate.push(co);
- 
-      // logic to start task processing
     }
 
     public:
+
+      cortex() {
+        workers_running = 1;
+        pthread_mutex_init( &gate_process_lock, NULL );
+        void * arg = (void*) this;
+        for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
+          pthread_create( &workers[i], NULL, _cortex_thread, arg );
+        }
+      }
+
+      ~cortex() {
+        workers_running = 0;
+        for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
+          pthread_join( workers[i], NULL );
+        }
+        pthread_mutex_destroy( &gate_process_lock );
+      }
 
       /**
        *  queue_task
@@ -112,17 +164,57 @@ namespace the_cortex {
       }
 
       /**
-       *  process_queue_iteratively
+       *  process_next_gate_element()
+       */
+      void process_next_gate_element() {
+        pthread_mutex_lock( &gate_process_lock );
+        gate.front_pop().execute();
+        pthread_mutex_unlock( &gate_process_lock );
+      }
+
+      /**
+       *  process_cortex_iteratively
        *  Goes through the entire queue, processing all tasks 1 by 1
        */
-      void process_queue_iteratively() {
+      void process_gate_iteratively() {
+        workers_running = 0;
         while(gate.size() > 0) {
-          gate.front().execute();
-          gate.pop();
+          process_next_gate_element();
         }
+      }
+
+      /**
+       *  status
+       *  whether the cortex has signaled its threads to process or not
+       */
+      int status() {
+        return workers_running;
+      }
+
+      /**
+       *  tasks_queued_in_gate
+       *  returns the number of tasks in the queue
+       */
+      int tasks_queued_in_gate() {
+        return gate.size();
       }
   };
 
+  /**
+   *  _cortex_thread
+   *  Thread function that the workers use to read from the queue
+   */
+  void* _cortex_thread(void* arg) {
+    cortex* core = (cortex*) arg;
+    while(core->status()) {
+      if(core->tasks_queued_in_gate()) {
+        core->process_next_gate_element();
+      }
+      else
+        cout << endl;
+    }
+    return NULL;
+  }
 }
 
 #endif

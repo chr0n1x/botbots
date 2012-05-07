@@ -4,24 +4,30 @@
 
 using namespace std;
 
+/**
+ *  Polymorphic classes
+ */
 class object {
   public:
-    virtual void func1() { cout << "obj -- func1" << endl; }
-    virtual void func2() { cout << "obj -- func2" << endl; }
+    virtual void func1() { cout << "obj -- func1\n"; }
+    virtual void func2() { cout << "obj -- func2"; }
 };
 
 class foo : public object {
   public:
-    void func1() { cout << "foo -- func1" << endl; }
-    void func2() { cout << "foo -- func2" << endl; }
+    void func1() { cout << "foo -- func1\n"; }
+    void func2() { cout << "foo -- func2\n"; }
 };
 
 class bar : public object {
   public:
-    void func1() { cout << "bar -- func1" << endl; }
-    void func2() { cout << "bar -- func2" << endl; }
+    void func1() { cout << "bar -- func1\n"; }
+    void func2() { cout << "bar -- func2\n"; }
 };
 
+/**
+ *  Thread functions
+ */
 void *_threaded_a(void *arg) {
   object * obj = (object *) arg;
   obj->func1();
@@ -40,11 +46,12 @@ int main() {
 
   cortex c;
 
-  c.queue_task(&f, &_threaded_a);
-  c.queue_task(&f, &_threaded_b);
+  for(int i=0; i<1000; ++i) {
+    c.queue_task(&f, &_threaded_a);
+    c.queue_task(&f, &_threaded_b);
+    c.queue_task(&b, &_threaded_a);
+    c.queue_task(&b, &_threaded_b);
+  }
 
-  c.queue_task(&b, &_threaded_a);
-  c.queue_task(&b, &_threaded_b);
-
-  c.process_queue_iteratively();
+  return 0;
 }
