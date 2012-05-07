@@ -16,6 +16,7 @@
 
 // threads
 #include <pthread.h>
+#include <sched.h>
 #include <unistd.h>
 
 using namespace std;
