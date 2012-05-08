@@ -7,8 +7,8 @@
 
 namespace the_cortex {
 
-  static const int MAX_CORTEX_THREADS = 4;
   void* _cortex_thread(void*);
+  static const int MAX_CORTEX_THREADS = 4;
 
   /**
    *  CLASS: cortex
@@ -121,7 +121,7 @@ namespace the_cortex {
     ts_queue gate;
     pthread_t workers[MAX_CORTEX_THREADS];
     pthread_mutex_t gate_process_lock;
-    int workers_running;
+    bool workers_running;
 
     /**
      *  queue_object
@@ -136,19 +136,12 @@ namespace the_cortex {
     public:
 
       cortex() {
-        workers_running = 1;
         pthread_mutex_init( &gate_process_lock, NULL );
-        void * arg = (void*) this;
-        for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
-          pthread_create( &workers[i], NULL, _cortex_thread, arg );
-        }
+        set_process_flag(true);
       }
 
       ~cortex() {
-        workers_running = 0;
-        for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
-          pthread_join( workers[i], NULL );
-        }
+        set_process_flag(false);
         pthread_mutex_destroy( &gate_process_lock );
       }
 
@@ -160,16 +153,17 @@ namespace the_cortex {
       template <typename _obj>
       void queue_task( _obj* object, void* (*thread_func)(void*) ) {
         specialized_cortex_object<_obj> sco(object, thread_func);
-        queue_object(sco);
+        //queue_object(sco);
+        gate.push(sco);
       }
 
       /**
        *  process_next_gate_element()
        */
       void process_next_gate_element() {
-        pthread_mutex_lock( &gate_process_lock );
+        //pthread_mutex_lock( &gate_process_lock );
         gate.front_pop().execute();
-        pthread_mutex_unlock( &gate_process_lock );
+        //pthread_mutex_unlock( &gate_process_lock );
       }
 
       /**
@@ -183,11 +177,32 @@ namespace the_cortex {
         }
       }
 
+      void set_process_flag(bool set) {
+        if(set == workers_running)
+          return;
+
+        workers_running = set;
+
+        // workers ARE dead -- re-init
+        if(workers_running) {
+          void * arg = (void*) this;
+          for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
+            pthread_create( &workers[i], NULL, _cortex_thread, arg );
+          }
+        }
+        // wait for workers to join 
+        else {
+          for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
+            pthread_join( workers[i], NULL );
+          }
+        }
+      }
+
       /**
        *  status
        *  whether the cortex has signaled its threads to process or not
        */
-      int status() {
+      bool status() {
         return workers_running;
       }
 
@@ -210,8 +225,6 @@ namespace the_cortex {
       if(core->tasks_queued_in_gate()) {
         core->process_next_gate_element();
       }
-      else
-        cout << endl;
     }
     return NULL;
   }
