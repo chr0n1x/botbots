@@ -45,6 +45,7 @@ int main() {
   bar b;
 
   cortex c;
+  c.set_process_flag(false);
 
   for(int i=0; i<1000; ++i) {
     c.queue_task(&f, &_threaded_a);
@@ -52,6 +53,8 @@ int main() {
     c.queue_task(&b, &_threaded_a);
     c.queue_task(&b, &_threaded_b);
   }
+
+  c.process_gate_iteratively();
 
   return 0;
 }
