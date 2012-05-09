@@ -120,7 +120,8 @@ namespace grid {
     pthread_mutex_t population_flux_lock;
 
     int MAX_BOTBOTS;
-    int rows, cols, cycles_passed;
+    int rows, cols;
+    size_t cycles_passed;
 
     /**
      *  PRIVATE FUNCTIONS
@@ -368,7 +369,7 @@ namespace grid {
       int botbot_count() {
         return live_bots.size();
       }
-      int grid_cycles() {
+      size_t grid_cycles() {
         return cycles_passed;
       }
 
