@@ -58,9 +58,7 @@ int main() {
   cout << "--------------------------------------\n";
 
   c.set_process_flag(true);
-
-  while(c.tasks_queued_in_gate() > 0) {}
-  //c.set_process_flag(false);
+  c.wait_for_empty_queue();
 
   return 0;
 }

@@ -111,10 +111,7 @@ namespace the_cortex {
         }
 
         int size() {
-          pthread_mutex_lock(&queue_lock);
-          int ret = que.size();
-          pthread_mutex_unlock(&queue_lock);
-          return ret;
+          return que.size();
         }
     };
 
@@ -198,19 +195,20 @@ namespace the_cortex {
       }
 
       /**
+       *  wait_for_empty_queue()
+       *  TODO: find a way to put the calling thread to sleep and then wake
+       */
+      void wait_for_empty_queue() {
+        while(gate.size())//tasks_queued_in_gate())
+          sched_yield();
+      }
+
+      /**
        *  status
        *  whether the cortex has signaled its threads to process or not
        */
       bool status() {
         return workers_running;
-      }
-
-      /**
-       *  tasks_queued_in_gate
-       *  returns the number of tasks in the queue
-       */
-      int tasks_queued_in_gate() {
-        return gate.size();
       }
   };
 
@@ -221,9 +219,7 @@ namespace the_cortex {
   void* _cortex_thread(void* arg) {
     cortex* core = (cortex*) arg;
     while(core->status()) {
-      if(core->tasks_queued_in_gate()) {
-        core->process_next_gate_element();
-      }
+      core->process_next_gate_element();
     }
     return NULL;
   }
