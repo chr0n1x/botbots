@@ -45,16 +45,22 @@ int main() {
   bar b;
 
   cortex c;
+  // hold off on processing for now
   c.set_process_flag(false);
 
-  for(int i=0; i<1000; ++i) {
+  for(int i=0; i<10000; ++i) {
     c.queue_task(&f, &_threaded_a);
     c.queue_task(&f, &_threaded_b);
     c.queue_task(&b, &_threaded_a);
     c.queue_task(&b, &_threaded_b);
   }
 
-  c.process_gate_iteratively();
+  cout << "--------------------------------------\n";
+
+  c.set_process_flag(true);
+
+  while(c.tasks_queued_in_gate() > 0) {}
+  //c.set_process_flag(false);
 
   return 0;
 }

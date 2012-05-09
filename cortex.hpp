@@ -25,14 +25,22 @@ namespace the_cortex {
       void* (*worker_function)(void*);
       void* object;
 
+      cortex_object() {
+        object = NULL;
+        worker_function = NULL;
+      }
+
       void operator=(cortex_object& in) {
         worker_function = in.worker_function;
         object = in.object;
       }
 
+      bool functional() {
+        return (object != NULL && worker_function != NULL);
+      }
+
       void execute() {
-        if(worker_function && object)
-          (*worker_function)(object);
+        (*worker_function)(object);
       }
     };
 
@@ -73,24 +81,10 @@ namespace the_cortex {
           pthread_mutex_unlock(&queue_lock);
         }
 
-        /*
-        void pop() {
-          pthread_mutex_lock(&queue_lock);
-
-          if(que.size() > 0) {
-            que.pop();
-            pthread_mutex_unlock(&queue_lock);
-          }
-        }
-
-        cortex_object& front() {
-          return que.front();
-        }
-        */
-
         cortex_object front_pop() {
           pthread_mutex_lock(&queue_lock);
 
+          bool locked = true;
           cortex_object ret;
           // make sure that there are objects in the queue
           if(que.size() > 0) {
@@ -100,18 +94,27 @@ namespace the_cortex {
           }
           // nothing in the queue; unlock the mutex, yield CPU
           // time to another thread (maybe the main to queue up objects)
+          // or to another thread that may get to the queue when there 
+          // are objects in it
           else {
+            locked = false;
             pthread_mutex_unlock(&queue_lock);
             //pthread_yield();
             sched_yield();
           }
 
-          pthread_mutex_unlock(&queue_lock);
+          // don't want to unlock the mutex if it has already been unlocked
+          if(locked)
+            pthread_mutex_unlock(&queue_lock);
+
           return ret;
         }
 
         int size() {
-          return que.size();
+          pthread_mutex_lock(&queue_lock);
+          int ret = que.size();
+          pthread_mutex_unlock(&queue_lock);
+          return ret;
         }
     };
 
@@ -120,7 +123,6 @@ namespace the_cortex {
      */
     ts_queue gate;
     pthread_t workers[MAX_CORTEX_THREADS];
-    pthread_mutex_t gate_process_lock;
     bool workers_running;
 
     /**
@@ -132,17 +134,15 @@ namespace the_cortex {
     void queue_object(specialized_cortex_object<_obj> co) {
       gate.push(co);
     }
-
+ 
     public:
 
       cortex() {
-        pthread_mutex_init( &gate_process_lock, NULL );
         set_process_flag(true);
       }
 
       ~cortex() {
         set_process_flag(false);
-        pthread_mutex_destroy( &gate_process_lock );
       }
 
       /**
@@ -153,7 +153,6 @@ namespace the_cortex {
       template <typename _obj>
       void queue_task( _obj* object, void* (*thread_func)(void*) ) {
         specialized_cortex_object<_obj> sco(object, thread_func);
-        //queue_object(sco);
         gate.push(sco);
       }
 
@@ -161,9 +160,9 @@ namespace the_cortex {
        *  process_next_gate_element()
        */
       void process_next_gate_element() {
-        //pthread_mutex_lock( &gate_process_lock );
-        gate.front_pop().execute();
-        //pthread_mutex_unlock( &gate_process_lock );
+        cortex_object co = gate.front_pop();
+        if(co.functional())
+          co.execute();
       }
 
       /**
