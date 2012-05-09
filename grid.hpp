@@ -122,6 +122,7 @@ namespace grid {
     int MAX_BOTBOTS;
     int rows, cols;
     size_t cycles_passed;
+    string white_space_filler;
 
     /**
      *  PRIVATE FUNCTIONS
@@ -135,6 +136,7 @@ namespace grid {
      */
     void initialize() {
       lg = new legacy_botbot();
+      white_space_filler = "                    ";
       cycles_passed = 0;
 
       MAX_BOTBOTS = rows*cols / 5;
@@ -374,30 +376,45 @@ namespace grid {
       }
 
       /**
+       *  row_width()
+       *  Based on any name of any botbot, returns the length that a line should be
+       *  based on the length of the name and the number of columns
+       */
+      int row_width() {
+        int ret = 0;
+        if(live_bots.size() > 0) {
+          ret = ((live_bots.begin()->first->name()).length()) / cols;
+        }
+        return ret;
+      }
+
+      /**
        * to_string()
        *
        * Does what it says, says what it does...?
        */
       string to_string() {
         if(live_bots.size() > 0) {
-          int line_width = ((live_bots.begin()->first->name()).length()) / cols;
-          string empt = "                    ";
+          int line_width = row_width();
+          string white_space_filler = "                    ";
 
+          // TODO: think of a way to encapsulate this in a class or classes
           stringstream buffer;
           streambuf * def = cout.rdbuf(buffer.rdbuf());
+          //cout << setfill(' ') << setw(line_width);
 
           for(int i=0; i<rows; ++i) {
 
             for(int j=0; j<cols; ++j) {
               botbot* bot = grid[i][j].get_botbot();
-              string bot_name = (bot == NULL || bot == 0) ? empt : grid[i][j].get_botbot()->name();
+              string bot_name = (bot == NULL || bot == 0) ? white_space_filler : grid[i][j].get_botbot()->name();
 
-              if(bot_name.length() !=  empt.length()) {
-                long long int diff = empt.length() - bot_name.length();
+              if(bot_name.length() !=  white_space_filler.length()) {
+                long long int diff = white_space_filler.length() - bot_name.length();
                 int other_diff = abs(diff);
-                bot_name += empt.substr(0, diff);
+                bot_name += white_space_filler.substr(0, diff);
               }
-              cout << setfill(' ') << setw(line_width);
+              cout << setw(line_width);
               cout << '[' << bot_name << ']';
             }
             cout << endl << endl;
@@ -417,24 +434,33 @@ namespace grid {
        *  SAYS WHAT IT DOES, DEFINITELY DOES WHAT IT SAYS
        */
       string population_to_string() {
-        string ret = "";
+        int line_width = row_width();
+
+        // TODO: think of a way to encapsulate this in a class or classes
+        stringstream buffer;
+        streambuf * def = cout.rdbuf(buffer.rdbuf());
+        cout << setfill(' ') << setw(line_width);
+
         if(live_bots.empty())
-          ret = "No botbots in grid";
+          cout << "No botbots in grid" << endl;
         else {
           map<botbot*, grid_cell*>::iterator it = live_bots.begin();
-          int col = 0;
+          int col = 1;
           for(it; it != live_bots.end(); ++it, ++col) {
-            ret += it->second->coordinates();
-            ret += "\t\t";
-            ret += it->first->name();
+             cout << it->second->coordinates();
+             cout << "\t";
+             cout << it->first->name();
 
-            if(col % 3 == 0 && col > 0)
-              ret += "\n";
+            if(col % 4 == 0) {
+              cout << endl;
+            }
             else
-              ret += "\t\t";
+              cout << "\t\t";
           }
         }
 
+        string ret = buffer.str();
+        cout.rdbuf(def);
         return ret;
       }
   };
