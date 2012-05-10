@@ -8,7 +8,7 @@
 namespace the_cortex {
 
   void* _cortex_thread(void*);
-  static const int MAX_CORTEX_THREADS = 8;
+  static const int MAX_CORTEX_THREADS = 4;
 
   /**
    *  CLASS: cortex

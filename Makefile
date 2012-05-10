@@ -1,5 +1,5 @@
 all:
-	make botbots; make ct;
+	make clean; make botbots; make ct;
 
 botbots:
 	g++ main.cpp -g -lncurses -lpthread -o botbots;

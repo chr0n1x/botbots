@@ -72,7 +72,7 @@ namespace the_grid {
        */
       int initialize_bot(botbot* enterer) {
 
-        pthread_mutex_lock(&occupy_lock);
+        while(pthread_mutex_trylock(&occupy_lock) != 0) sched_yield();
         if(bot == NULL) {
           bot = enterer;
         }
@@ -145,7 +145,7 @@ namespace the_grid {
      *  to keep the constructors DRY
      */
     void initialize() {
-      grid_cortex.set_process_flag(false);
+      //grid_cortex.set_process_flag(false);
       lg = new legacy_botbot();
       white_space_filler = "                    ";
       cycles_passed = 0;
@@ -180,7 +180,7 @@ namespace the_grid {
      *  all that
      */
     void add_botbot_to_list(botbot* bot, grid_cell* cell) {
-      pthread_mutex_lock(&population_flux_lock);
+      while(pthread_mutex_trylock(&population_flux_lock) != 0) sched_yield();
       live_bots.insert( pair<botbot*, grid_cell*>(bot, cell) );
       pthread_mutex_unlock(&population_flux_lock);
     }
@@ -194,20 +194,23 @@ namespace the_grid {
     bool cmd_decide_coordinates() {
       int thread_ret;
       pthread_t threads[live_bots.size()];
-
-      map<botbot*, grid_cell*>::iterator it = live_bots.begin();
       int i=0;
+
+      //grid_cortex.set_process_flag(true);
+      map<botbot*, grid_cell*>::iterator it = live_bots.begin();
       for(it; it != live_bots.end(); ++it) {
         thread_ret = pthread_create( &threads[i], NULL, _botbot_decision_thread, (void*) it->first);
         if(thread_ret)
           return false;
         ++i;
+        //grid_cortex.queue_task(it->first, &_botbot_decision_thread);
       }
 
       // wait for threads to join back to main thread
       for(int i=0; i<live_bots.size(); ++i) {
         pthread_join(threads[i], NULL);
       }
+      //grid_cortex.wait_for_empty_queue(false);
       return true;
     }
 
@@ -308,19 +311,10 @@ namespace the_grid {
         if(live_bots.size() >= MAX_BOTBOTS)
           return false;
         else {
-          // create threads
-          int thread_ret;
-          pthread_t threads[MAX_BOTBOTS];
           for(int i=0; i<MAX_BOTBOTS; ++i) {
-            thread_ret = pthread_create( &threads[i], NULL, _botbot_creation_thread, (void*)this );
-            if(thread_ret)
-              return false;
+            grid_cortex.queue_task(this, &_botbot_creation_thread);
           }
-
-          // wait for threads to join back to main thread
-          for(int i=0; i<MAX_BOTBOTS; ++i) {
-            pthread_join(threads[i], NULL);
-          }
+          grid_cortex.wait_for_empty_queue(true);
 
           return true;
         }
