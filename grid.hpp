@@ -463,7 +463,10 @@ namespace the_grid {
           int col = 1;
           for(it; it != live_bots.end(); ++it, ++col) {
              cout << it->second->coordinates();
-             cout << "\t";
+             if(it->second->coordinates().length() > 7)
+               cout << "\t";
+             else
+               cout << "\t\t";
              cout << it->first->name();
 
             if(col % 4 == 0) {
