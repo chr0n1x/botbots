@@ -5,27 +5,32 @@
 using namespace std;
 using namespace the_cortex;
 
-#define ELEMENTS 10000
+#define ELEMENTS  1000
+#define BENCHMARK true
 
 /**
  *  Polymorphic classes
  */
 class object {
+  double blah;
   public:
-    virtual void func1() { cout << "obj -- func1\n"; }
-    virtual void func2() { cout << "obj -- func2"; }
+    virtual void func1() { if(!BENCHMARK) cout << "obj -- func1"; }
+    virtual void func2() { if(!BENCHMARK) cout << "obj -- func2"; }
+    void set_blah(double in) {
+      blah = in;
+    }
 };
 
 class foo : public object {
   public:
-    void func1() { cout << "foo -- func1\n"; }
-    void func2() { cout << "foo -- func2\n"; }
+    void func1() { if(!BENCHMARK) cout << "foo -- func1"; }
+    void func2() { if(!BENCHMARK) cout << "foo -- func2"; }
 };
 
 class bar : public object {
   public:
-    void func1() { cout << "bar -- func1\n"; }
-    void func2() { cout << "bar -- func2\n"; }
+    void func1() { if(!BENCHMARK) cout << "bar -- func1"; }
+    void func2() { if(!BENCHMARK) cout << "bar -- func2"; }
 };
 
 /**
@@ -46,8 +51,8 @@ void *_threaded_b(void *arg) {
  *
  *  pretty self explanatory
  */
-void fill(cortex &c, foo f, bar b) {
-  for(int i=0; i<ELEMENTS; ++i) {
+void fill(cortex &c, bar b, foo f) {
+  for(size_t i=0; i<ELEMENTS; ++i) {
     c.queue_task(&f, &_threaded_a);
     c.queue_task(&f, &_threaded_b);
     c.queue_task(&b, &_threaded_a);
@@ -60,45 +65,54 @@ void fill(cortex &c, foo f, bar b) {
  */
 int main(int argc, char ** argv) {
 
-  if(argc != 2) {
-    cout << "Usage: ./cortex_test <passes>" << endl;
-    return 0;
+  int runs = 0;
+  if(argc == 2) {
+    runs = atoi(argv[1]);
   }
-  int runs = atoi(argv[1]);
+  else {
+    runs = 1;
+  }
 
-  foo f;
-  bar b;
-  cortex c;
+  cortex c1, c2;
+  c1.set_process_flag(false);
 
-  time_t iterative_sum = 0;
-  time_t threaded_sum = 0;
+  double iterative_sum = 0;
+  double threaded_sum = 0;
 
+  cout << "Running " << runs << " passes for " << 4*ELEMENTS << " elements..." << endl;
   for(int passes=0; passes<runs; ++passes) {
-    cout << "BENCHMARKS PASS " << passes+1 << endl;
+    // generate a new set of objects each iteration to prevent any compiler optimizations
+    foo f;
+    f.set_blah(rand());
+    bar b;
+    b.set_blah(rand());
+    cout << "Pass\t" << passes+1 << endl;
 
     // ITERATIVE PASS
-    c.set_process_flag(false);
-    fill(c, f, b);
     time_t iterative_pass_start = time(NULL);
-    c.process_gate_iteratively();
+    fill(c1, b, f);
+    c1.process_gate_iteratively();
     time_t iterative_pass_end = time(NULL);
-    iterative_sum += (iterative_pass_end - iterative_pass_start);
+    double diff = difftime(iterative_pass_end, iterative_pass_start);
+    iterative_sum += diff;
+    cout << "\tIterative:\t" << (double)diff << " seconds" << endl;
 
     // THREADED PASS
-    c.set_process_flag(true);
     time_t threaded_pass_start = time(NULL);
-    fill(c, f, b);
-    c.wait_for_empty_queue();
+    fill(c2, b, f);
+    c2.wait_for_empty_queue((passes == runs-1));
     time_t threaded_pass_end = time(NULL);
-    threaded_sum += (threaded_pass_end - threaded_pass_start);
+    diff = difftime(threaded_pass_end, threaded_pass_start);
+    threaded_sum += diff;
+    cout << "\tThreaded:\t" << (double)diff << " seconds" << endl;
   }
 
   cout << "--------------------------------------\n";
-  cout << "Total Run Time:\t" << iterative_sum+threaded_sum << endl;
-  cout << "Iterative Total:\t" << iterative_sum << endl;
-  cout << "Iterative Avg:\t" << iterative_sum / runs << endl;
-  cout << "Threaded Total:\t" << threaded_sum << endl;
-  cout << "Threaded Avg:\t" << threaded_sum / runs << endl;
+  cout << "Total Run Time:\t\t" << iterative_sum+threaded_sum  << " seconds" << endl;
+  cout << "Iterative Total:\t"  << iterative_sum               << " seconds" << endl;
+  cout << "Iterative Avg:\t\t"  << iterative_sum / runs        << " seconds" << endl;
+  cout << "Threaded Total:\t\t" << threaded_sum                << " seconds" << endl;
+  cout << "Threaded Avg:\t\t"   << threaded_sum / runs         << " seconds" << endl;
 
   return 0;
 }

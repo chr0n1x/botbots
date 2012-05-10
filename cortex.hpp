@@ -8,7 +8,7 @@
 namespace the_cortex {
 
   void* _cortex_thread(void*);
-  static const int MAX_CORTEX_THREADS = 4;
+  static const int MAX_CORTEX_THREADS = 8;
 
   /**
    *  CLASS: cortex
@@ -84,10 +84,10 @@ namespace the_cortex {
          *  push()
          *  (cortex_object&) x the object to be queued
          *
-         *  Surrounding the queue's push method with a lock
+         *  Push an object to the end of the queue
          */
         void push(const cortex_object &x) {
-          pthread_mutex_lock(&queue_lock);
+          while(pthread_mutex_trylock(&queue_lock) != 0) sched_yield();
           que.push(x);
           pthread_mutex_unlock(&queue_lock);
         }
@@ -99,35 +99,22 @@ namespace the_cortex {
          *  queue and pop it off
          */
         cortex_object front_pop() {
-          pthread_mutex_lock(&queue_lock);
+          while(pthread_mutex_trylock(&queue_lock) != 0) sched_yield();
 
-          bool locked = true;
           cortex_object ret;
+
           // make sure that there are objects in the queue
-          if(que.size() > 0) {
+          if(que.size() > 0 && que.front().functional()) {
             // get the front as a copy, pop it off
             ret = que.front();
             que.pop();
           }
-          // nothing in the queue; unlock the mutex, yield CPU
-          // time to another thread (maybe the main to queue up objects)
-          // or to another thread that may get to the queue when there 
-          // are objects in it
-          else {
-            locked = false;
-            pthread_mutex_unlock(&queue_lock);
-            //pthread_yield();
-            sched_yield();
-          }
-
-          // don't want to unlock the mutex if it has already been unlocked
-          if(locked)
-            pthread_mutex_unlock(&queue_lock);
+          pthread_mutex_unlock(&queue_lock);
 
           return ret;
         }
 
-        int size() {
+        size_t size() {
           return que.size();
         }
     };
@@ -215,12 +202,16 @@ namespace the_cortex {
 
       /**
        *  wait_for_empty_queue()
+       *  (bool) terminate Make the threads join
        *
        *  TODO: find a way to put the calling thread to sleep and then wake
        */
-      void wait_for_empty_queue() {
+      void wait_for_empty_queue(bool terminate) {
         while(gate.size())//tasks_queued_in_gate())
           sched_yield();
+
+        if(terminate)
+          set_process_flag(false);
       }
 
       /**
@@ -230,6 +221,15 @@ namespace the_cortex {
        */
       bool process_signal() {
         return workers_running;
+      }
+
+      /**
+       *  objects_in_gate()
+       *
+       *  Return the number of objects queued in the gate
+       */
+      size_t objects_in_gate() {
+        return gate.size();
       }
   };
 
