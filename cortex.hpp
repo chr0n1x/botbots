@@ -224,11 +224,11 @@ namespace the_cortex {
       }
 
       /**
-       *  run_signal()
+       *  process_signal()
        *
        *  whether the cortex has signaled its threads to process or not
        */
-      bool run_signal() {
+      bool process_signal() {
         return workers_running;
       }
   };
@@ -242,7 +242,7 @@ namespace the_cortex {
    */
   void* _cortex_thread(void* arg) {
     cortex* core = (cortex*) arg;
-    while(core->run_signal()) {
+    while(core->process_signal()) {
       core->process_next_gate_element();
     }
     return NULL;

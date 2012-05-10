@@ -125,6 +125,8 @@ namespace the_grid {
     map<botbot*, grid_cell*> live_bots;
 
     legacy_botbot* lg;
+    cortex grid_cortex;
+
     pthread_mutex_t population_flux_lock;
 
     int MAX_BOTBOTS;
@@ -143,6 +145,7 @@ namespace the_grid {
      *  to keep the constructors DRY
      */
     void initialize() {
+      grid_cortex.set_process_flag(false);
       lg = new legacy_botbot();
       white_space_filler = "                    ";
       cycles_passed = 0;
