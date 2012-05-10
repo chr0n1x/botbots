@@ -41,6 +41,11 @@ void *_threaded_b(void *arg) {
   obj->func2();
 }
 
+/**
+ *  fill()
+ *
+ *  pretty self explanatory
+ */
 void fill(cortex &c, foo f, bar b) {
   for(int i=0; i<ELEMENTS; ++i) {
     c.queue_task(&f, &_threaded_a);
@@ -50,6 +55,9 @@ void fill(cortex &c, foo f, bar b) {
   }
 }
 
+/**
+ *  main()
+ */
 int main(int argc, char ** argv) {
 
   if(argc != 2) {

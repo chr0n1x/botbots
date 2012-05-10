@@ -16,7 +16,7 @@ int main(int argc, char ** argv) {
     grid_rows = atoi(argv[1]);
     grid_cols = atoi(argv[2]);
   }
-  grid::the_grid g(grid_rows, grid_cols);
+  the_grid::grid g(grid_rows, grid_cols);
   cout << "Initializing Grid..." << endl;
   g.fill_to_capacity();
 

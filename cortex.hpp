@@ -12,6 +12,7 @@ namespace the_cortex {
 
   /**
    *  CLASS: cortex
+   *
    *  Implementation of a thread pool using a thread
    *  safe queue
    */
@@ -19,6 +20,7 @@ namespace the_cortex {
 
     /**
      *  STRUCT: cortex_object
+     *
      *  Most basic unit of the cortex
      */
     struct cortex_object {
@@ -46,6 +48,7 @@ namespace the_cortex {
 
     /**
      *  STRUCT: specialized_cortex_object
+     *
      *  "Atomic" units that are queued for the worker threads
      *  to process
      */
@@ -59,7 +62,9 @@ namespace the_cortex {
 
     /**
      *  CLASS: ts_queue
+     *
      *  class wrapper to make the container thread safe
+     *  Might make this overwrite queue<cortex_object> instead
      */
     class ts_queue {
 
@@ -75,12 +80,24 @@ namespace the_cortex {
           pthread_mutex_destroy(&queue_lock);
         }
 
+        /**
+         *  push()
+         *  (cortex_object&) x the object to be queued
+         *
+         *  Surrounding the queue's push method with a lock
+         */
         void push(const cortex_object &x) {
           pthread_mutex_lock(&queue_lock);
           que.push(x);
           pthread_mutex_unlock(&queue_lock);
         }
 
+        /**
+         *  front_pop()
+         *
+         *  Thread-safe method to retrieve the front cortex_object in the
+         *  queue and pop it off
+         */
         cortex_object front_pop() {
           pthread_mutex_lock(&queue_lock);
 
@@ -121,16 +138,6 @@ namespace the_cortex {
     ts_queue gate;
     pthread_t workers[MAX_CORTEX_THREADS];
     bool workers_running;
-
-    /**
-     *  queue_object
-     *  Adds a specialized cortex object to the queue
-     *  and starts processing if possible
-     */
-    template <typename _obj>
-    void queue_object(specialized_cortex_object<_obj> co) {
-      gate.push(co);
-    }
  
     public:
 
@@ -143,7 +150,10 @@ namespace the_cortex {
       }
 
       /**
-       *  queue_task
+       *  queue_task()
+       *  (void*) (*thread_func)(void*) pointer to the function that knows how to handle
+       *  (_obj*) object, the data to be processed
+       *
        *  Given a function pointer and the argument that it requires,
        *  create a cortex_object and push it into the queue
        */
@@ -163,16 +173,25 @@ namespace the_cortex {
       }
 
       /**
-       *  process_cortex_iteratively
+       *  process_cortex_iteratively()
+       *
        *  Goes through the entire queue, processing all tasks 1 by 1
        */
       void process_gate_iteratively() {
-        workers_running = 0;
+        workers_running = false;
         while(gate.size() > 0) {
           process_next_gate_element();
         }
       }
 
+      /**
+       *  set_process_flag()
+       *  (bool) set The value to set workers_running to
+       *
+       *  Sets the workers_running flag
+       *  Based on the new state of the flag, the threads are 
+       *  Either re-created or joined with the main thread.
+       */
       void set_process_flag(bool set) {
         if(set == workers_running)
           return;
@@ -196,6 +215,7 @@ namespace the_cortex {
 
       /**
        *  wait_for_empty_queue()
+       *
        *  TODO: find a way to put the calling thread to sleep and then wake
        */
       void wait_for_empty_queue() {
@@ -204,21 +224,25 @@ namespace the_cortex {
       }
 
       /**
-       *  status
+       *  run_signal()
+       *
        *  whether the cortex has signaled its threads to process or not
        */
-      bool status() {
+      bool run_signal() {
         return workers_running;
       }
   };
 
   /**
-   *  _cortex_thread
-   *  Thread function that the workers use to read from the queue
+   *  _cortex_thread()
+   *  (void*) arg The cortex to be read from
+   *
+   *  Thread function that the workers use to access the cortex that they
+   *  belong to and process the next cortex_object
    */
   void* _cortex_thread(void* arg) {
     cortex* core = (cortex*) arg;
-    while(core->status()) {
+    while(core->run_signal()) {
       core->process_next_gate_element();
     }
     return NULL;

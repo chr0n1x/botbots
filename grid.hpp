@@ -8,7 +8,7 @@
 #include "botbot.hpp"
 #include "cortex.hpp"
 
-namespace grid {
+namespace the_grid {
 
   using namespace the_cortex;
   using namespace bot_factory;
@@ -41,6 +41,7 @@ namespace grid {
         col = 0;
         pthread_mutex_init(&occupy_lock, NULL);
       }
+
       ~grid_cell() {
         if(bot != NULL) delete bot;
         pthread_mutex_destroy(&occupy_lock);
@@ -48,6 +49,10 @@ namespace grid {
 
       /**
        *  initialize()
+       *  (int) assigned_id   Arbitrary integer assigned to the cell
+       *  (int) x             Row
+       *  (int) y             Column
+       *
        *  Just initializes the cell with an id and the coordinates
        */
       int initialize(int assigned_id, int x, int y) {
@@ -60,6 +65,7 @@ namespace grid {
 
       /**
        *  initialize_bot()
+       *  (botbot*) enterer   The botbot that wants to go into this cell
        *
        *  given a botbot, locks the cell and attempts to place
        *  the botbot into it
@@ -77,6 +83,7 @@ namespace grid {
 
       /**
        *  botbot_terminated()
+       *
        *  Called if the botbot moves or dies
        */
       void botbot_terminated() {
@@ -85,6 +92,7 @@ namespace grid {
 
       /**
        *  coordinates()
+       *
        *  Returns the coordinates in string format
        */
       string coordinates() {
@@ -108,12 +116,12 @@ namespace grid {
       }
   };
 
-  class the_grid {
+  class grid {
 
     /**
      *  GRID FIELDS
      */
-    vector<vector <grid_cell> > grid;
+    vector<vector <grid_cell> > vgrid;
     map<botbot*, grid_cell*> live_bots;
 
     legacy_botbot* lg;
@@ -143,15 +151,15 @@ namespace grid {
 
       vector<grid_cell> row;
       for(int i=0; i<rows; ++i) {
-        grid.push_back(row);
+        vgrid.push_back(row);
       }
 
       grid_cell base_cell;
       int cell_count = 0;
       for(int i=0; i<rows; ++i) {
         for(int j=0; j<cols; ++j) {
-          grid[i].push_back(base_cell);
-          grid[i][j].initialize(cell_count, i, j);
+          vgrid[i].push_back(base_cell);
+          vgrid[i][j].initialize(cell_count, i, j);
           ++cell_count;
         }
       }
@@ -161,6 +169,9 @@ namespace grid {
 
     /**
      *  add_botbot_to_list()
+     *  (botbot*)     bot         The botbot and...
+     *  (grid_cell*)  cell        His cell
+     *
      *  Keeping record of botbots and what grid_cells they're assigned to
      *  When botbots move, the goto function will handle keeping track of
      *  all that
@@ -173,6 +184,7 @@ namespace grid {
 
     /**
      *  cmd_decide_coordinates()
+     *
      *  Makes all botbots decide on a coordinate that they want to go to
      *  This halts the main thread
      */
@@ -207,10 +219,9 @@ namespace grid {
      *  The main thread halts for this process
      */
     void cmd_goto_coordinates() {
-      // go through each grid_cell
       for(int i=0; i<rows; ++i) {
         for(int j=0; j<cols; ++j) {
-          botbot * bot = grid[i][j].get_botbot();
+          botbot * bot = vgrid[i][j].get_botbot();
 
           if(bot != NULL) {
             // case where the bot tries to go out of the grid
@@ -223,7 +234,7 @@ namespace grid {
             }
             else {
               grid_cell* from_cell = live_bots[bot];
-              grid_cell* to_cell = &grid[bot->get_row()][bot->get_col()];
+              grid_cell* to_cell = &vgrid[bot->get_row()][bot->get_col()];
               botbot* occupying_bot = to_cell->get_botbot();
 
               // there is no botbot in the cell that this botbot wants to go to
@@ -259,13 +270,13 @@ namespace grid {
       /**
        *  default and explicit constructors, destructor
        */
-      the_grid() {
+      grid() {
         rows = DEFAULT_GRID_DIM;
         cols = DEFAULT_GRID_DIM;
         this->initialize();
       }
 
-      the_grid(int in_rows, int in_cols) {
+      grid(int in_rows, int in_cols) {
         if(in_rows < DEFAULT_GRID_DIM) {
           in_rows = DEFAULT_GRID_DIM;
         }
@@ -279,13 +290,14 @@ namespace grid {
         this->initialize();
       }
 
-      ~the_grid() {
+      ~grid() {
         delete lg;
         pthread_mutex_destroy(&population_flux_lock);
       }
 
       /**
        *  fill_to_capacity()
+       *
        *  Inserts botbots into the grid until it's to capacity (based on MAX_BOTBOTS)
        *  Returns a boolean based on success or failure
        */
@@ -314,6 +326,7 @@ namespace grid {
 
       /**
        *  create_botizen()
+       *
        *  Makes a botbot and throws it onto the grid
        */
       bool create_botizen() {
@@ -331,11 +344,11 @@ namespace grid {
             x = rand() % rows;
             y = rand() % cols;
           }
-          while(grid[x][y].get_botbot() != NULL);
+          while(vgrid[x][y].get_botbot() != NULL);
 
-          if(grid[x][y].initialize_bot(b)) {
+          if(vgrid[x][y].initialize_bot(b)) {
             b->set_current_cell(x, y);
-            add_botbot_to_list(b, &grid[x][y]);
+            add_botbot_to_list(b, &vgrid[x][y]);
             ret = true;
           }
           else {
@@ -377,6 +390,7 @@ namespace grid {
 
       /**
        *  row_width()
+       *
        *  Based on any name of any botbot, returns the length that a line should be
        *  based on the length of the name and the number of columns
        */
@@ -406,8 +420,8 @@ namespace grid {
           for(int i=0; i<rows; ++i) {
 
             for(int j=0; j<cols; ++j) {
-              botbot* bot = grid[i][j].get_botbot();
-              string bot_name = (bot == NULL || bot == 0) ? white_space_filler : grid[i][j].get_botbot()->name();
+              botbot* bot = vgrid[i][j].get_botbot();
+              string bot_name = (bot == NULL || bot == 0) ? white_space_filler : vgrid[i][j].get_botbot()->name();
 
               if(bot_name.length() !=  white_space_filler.length()) {
                 long long int diff = white_space_filler.length() - bot_name.length();
@@ -431,6 +445,7 @@ namespace grid {
 
       /**
        *  population_to_string()
+       *
        *  SAYS WHAT IT DOES, DEFINITELY DOES WHAT IT SAYS
        */
       string population_to_string() {
@@ -467,18 +482,22 @@ namespace grid {
 
   /**
    *  _botbot_creation_thread()
+   *  (void*) arg     The grid
+   *
    *  function intended to be used as a thread only!
    *  used in fill_to_capacity()
    */
   void *_botbot_creation_thread(void* arg) {
-    the_grid * grid = (the_grid*) arg;
-    if(grid != NULL)
-      bool res = grid->create_botizen();
+    grid * g = (grid*) arg;
+    if(g != NULL)
+      bool res = g->create_botizen();
     return NULL;
   }
 
   /**
    *  _botbot_decision_thread()
+   *  (void*) arg     a botbot
+   *
    *  There has to be a better way to do this...
    */
   void *_botbot_decision_thread(void* arg) {
