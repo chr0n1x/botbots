@@ -13,7 +13,7 @@ namespace the_grid {
   using namespace the_cortex;
   using namespace bot_factory;
 
-  static const int DEFAULT_GRID_DIM = 8;
+  static const int DEFAULT_GRID_DIM = 5;
 
   void *_botbot_creation_thread(void*);
   void *_botbot_decision_thread(void*);
@@ -192,24 +192,31 @@ namespace the_grid {
      *  This halts the main thread
      */
     bool cmd_decide_coordinates() {
+      /*
       int thread_ret;
       pthread_t threads[live_bots.size()];
       int i=0;
+      */
 
-      //grid_cortex.set_process_flag(true);
+      grid_cortex.set_process_flag(false);
       map<botbot*, grid_cell*>::iterator it = live_bots.begin();
       for(it; it != live_bots.end(); ++it) {
+        /*
         thread_ret = pthread_create( &threads[i], NULL, _botbot_decision_thread, (void*) it->first);
         if(thread_ret)
           return false;
         ++i;
-        //grid_cortex.queue_task(it->first, &_botbot_decision_thread);
+        */
+        grid_cortex.queue_task(it->first, &_botbot_decision_thread);
       }
+      grid_cortex.process_gate_iteratively();
 
+      /*
       // wait for threads to join back to main thread
       for(int i=0; i<live_bots.size(); ++i) {
         pthread_join(threads[i], NULL);
       }
+      */
       //grid_cortex.wait_for_empty_queue(false);
       return true;
     }
@@ -311,6 +318,7 @@ namespace the_grid {
         if(live_bots.size() >= MAX_BOTBOTS)
           return false;
         else {
+          grid_cortex.set_process_flag(true);
           for(int i=0; i<MAX_BOTBOTS; ++i) {
             grid_cortex.queue_task(this, &_botbot_creation_thread);
           }
@@ -466,7 +474,7 @@ namespace the_grid {
                cout << "\t\t";
              cout << it->first->name();
 
-            if(col % 4 == 0) {
+            if(col % (cols/4) == 0) {
               cout << endl;
             }
             else

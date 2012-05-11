@@ -5,7 +5,7 @@
 using namespace std;
 using namespace the_cortex;
 
-#define ELEMENTS  1000
+#define ELEMENTS  125000
 #define BENCHMARK true
 
 /**

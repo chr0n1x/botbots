@@ -1,9 +1,8 @@
 #ifndef __CORTEX
 #define __CORTEX
 
-#include <queue>
-
 #include "internals.hpp"
+#include "ts_queue.hpp"
 
 namespace the_cortex {
 
@@ -61,68 +60,9 @@ namespace the_cortex {
     };
 
     /**
-     *  CLASS: ts_queue
-     *
-     *  class wrapper to make the container thread safe
-     *  Might make this overwrite queue<cortex_object> instead
-     */
-    class ts_queue {
-
-      queue<cortex_object> que;
-      pthread_mutex_t queue_lock;
-
-      public:
-        ts_queue() {
-          pthread_mutex_init(&queue_lock, NULL);
-        }
-
-        ~ts_queue() {
-          pthread_mutex_destroy(&queue_lock);
-        }
-
-        /**
-         *  push()
-         *  (cortex_object&) x the object to be queued
-         *
-         *  Push an object to the end of the queue
-         */
-        void push(const cortex_object &x) {
-          while(pthread_mutex_trylock(&queue_lock) != 0) sched_yield();
-          que.push(x);
-          pthread_mutex_unlock(&queue_lock);
-        }
-
-        /**
-         *  front_pop()
-         *
-         *  Thread-safe method to retrieve the front cortex_object in the
-         *  queue and pop it off
-         */
-        cortex_object front_pop() {
-          while(pthread_mutex_trylock(&queue_lock) != 0) sched_yield();
-
-          cortex_object ret;
-
-          // make sure that there are objects in the queue
-          if(que.size() > 0 && que.front().functional()) {
-            // get the front as a copy, pop it off
-            ret = que.front();
-            que.pop();
-          }
-          pthread_mutex_unlock(&queue_lock);
-
-          return ret;
-        }
-
-        size_t size() {
-          return que.size();
-        }
-    };
-
-    /**
      *  FIELDS
      */
-    ts_queue gate;
+    ts_queue<cortex_object> gate;
     pthread_t workers[MAX_CORTEX_THREADS];
     bool workers_running;
  
@@ -154,13 +94,13 @@ namespace the_cortex {
        *  process_next_gate_element()
        */
       void process_next_gate_element() {
-        cortex_object co = gate.front_pop();
+        cortex_object co = gate.back_pop();
         if(co.functional())
           co.execute();
       }
 
       /**
-       *  process_cortex_iteratively()
+       *  process_gate_iteratively()
        *
        *  Goes through the entire queue, processing all tasks 1 by 1
        */
@@ -207,8 +147,7 @@ namespace the_cortex {
        *  TODO: find a way to put the calling thread to sleep and then wake
        */
       void wait_for_empty_queue(bool terminate) {
-        while(gate.size())//tasks_queued_in_gate())
-          sched_yield();
+        while(gate.size()) sched_yield();
 
         if(terminate)
           set_process_flag(false);
