@@ -13,7 +13,8 @@ namespace the_grid {
   using namespace the_cortex;
   using namespace bot_factory;
 
-  static const int DEFAULT_GRID_DIM = 5;
+  static const int  DEFAULT_GRID_DIM = 5;
+  static const bool FULL_THREAD = false;
 
   void *_botbot_creation_thread(void*);
   void *_botbot_decision_thread(void*);
@@ -145,7 +146,6 @@ namespace the_grid {
      *  to keep the constructors DRY
      */
     void initialize() {
-      //grid_cortex.set_process_flag(false);
       lg = new legacy_botbot();
       white_space_filler = "                    ";
       cycles_passed = 0;
@@ -192,32 +192,16 @@ namespace the_grid {
      *  This halts the main thread
      */
     bool cmd_decide_coordinates() {
-      /*
-      int thread_ret;
-      pthread_t threads[live_bots.size()];
-      int i=0;
-      */
-
-      grid_cortex.set_process_flag(false);
+      grid_cortex.set_process_flag(FULL_THREAD);
       map<botbot*, grid_cell*>::iterator it = live_bots.begin();
       for(it; it != live_bots.end(); ++it) {
-        /*
-        thread_ret = pthread_create( &threads[i], NULL, _botbot_decision_thread, (void*) it->first);
-        if(thread_ret)
-          return false;
-        ++i;
-        */
         grid_cortex.queue_task(it->first, &_botbot_decision_thread);
       }
-      grid_cortex.process_gate_iteratively();
+      if(FULL_THREAD)
+        grid_cortex.wait_for_empty_queue(false);
+      else
+        grid_cortex.process_gate_iteratively();
 
-      /*
-      // wait for threads to join back to main thread
-      for(int i=0; i<live_bots.size(); ++i) {
-        pthread_join(threads[i], NULL);
-      }
-      */
-      //grid_cortex.wait_for_empty_queue(false);
       return true;
     }
 
