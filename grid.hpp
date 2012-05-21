@@ -413,7 +413,8 @@ namespace the_grid {
               string bot_name = (bot == NULL || bot == 0) ? white_space_filler : vgrid[i][j].get_botbot()->name();
 
               if(bot_name.length() !=  white_space_filler.length()) {
-                long long int diff = white_space_filler.length() - bot_name.length();
+                //long long int diff = white_space_filler.length() - bot_name.length();
+                int diff = white_space_filler.length() - bot_name.length();
                 int other_diff = abs(diff);
                 bot_name += white_space_filler.substr(0, diff);
               }
