@@ -306,7 +306,7 @@ namespace the_grid {
           for(int i=0; i<MAX_BOTBOTS; ++i) {
             grid_cortex.queue_task(this, &_botbot_creation_thread);
           }
-          grid_cortex.wait_for_empty_queue(true);
+          grid_cortex.wait_for_empty_queue(!FULL_THREAD);
 
           return true;
         }
