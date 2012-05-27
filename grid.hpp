@@ -152,7 +152,7 @@ namespace the_grid {
       white_space_filler = "                    ";
       cycles_passed = 0;
 
-      MAX_BOTBOTS = rows*cols / 5;
+      MAX_OBJECTS = rows*cols / 5;
 
       vector<grid_cell> row;
       for(int i=0; i<rows; ++i) {
@@ -297,15 +297,15 @@ namespace the_grid {
       /**
        *  fill_to_capacity()
        *
-       *  Inserts botbots into the grid until it's to capacity (based on MAX_BOTBOTS)
+       *  Inserts botbots into the grid until it's to capacity (based on MAX_OBJECTS)
        *  Returns a boolean based on success or failure
        */
       bool fill_to_capacity() {
-        if(live_bots.size() >= MAX_BOTBOTS)
+        if(live_bots.size() >= MAX_OBJECTS)
           return false;
         else {
           grid_cortex.set_process_flag(true);
-          for(int i=0; i<MAX_BOTBOTS; ++i) {
+          for(int i=0; i<MAX_OBJECTS; ++i) {
             grid_cortex.queue_task(this, &_botbot_creation_thread);
           }
           grid_cortex.wait_for_empty_queue(true);
@@ -323,7 +323,7 @@ namespace the_grid {
       bool create_botizen() {
 
         bool ret;
-        if(live_bots.size() == rows*cols || live_bots.size() >= MAX_BOTBOTS) {
+        if(live_bots.size() == rows*cols || live_bots.size() >= MAX_OBJECTS) {
           ret = false;
         }
         else {
@@ -432,7 +432,7 @@ namespace the_grid {
           cout.rdbuf(def);
           return ret;
         }
-        return "ALL BOTBOTS DIED\n";
+        return "Empty Grid\n";
       }
 
       /**
