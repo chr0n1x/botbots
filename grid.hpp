@@ -23,20 +23,21 @@ namespace the_grid {
    *  CLASS: grid_cell
    *  Most basic unit of the grid
    *
-   *  Implements a mutex to prevent multiple botbots from
-   *  trying to occupy it (at most 2 botbots can interact over
+   *  Implements a mutex to prevent multiple _obj from
+   *  trying to occupy it (at most 2 _obj can interact over
    *  a single grid_cell)
    */
+  template <typename _obj>
   class grid_cell {
     int id;
     int row, col;
-    botbot* bot;
+    _obj* object;
     pthread_mutex_t occupy_lock;
 
     public:
 
       grid_cell() {
-        bot = NULL;
+        object = NULL;
         id = 0;
         row = 0;
         col = 0;
@@ -44,7 +45,7 @@ namespace the_grid {
       }
 
       ~grid_cell() {
-        if(bot != NULL) delete bot;
+        if(object != NULL) delete bot;
         pthread_mutex_destroy(&occupy_lock);
       }
 
@@ -57,7 +58,7 @@ namespace the_grid {
        *  Just initializes the cell with an id and the coordinates
        */
       int initialize(int assigned_id, int x, int y) {
-        if(bot == NULL) {
+        if(object == NULL) {
           id = assigned_id;
           row = x;
           col = y;
@@ -65,30 +66,30 @@ namespace the_grid {
       }
 
       /**
-       *  initialize_bot()
-       *  (botbot*) enterer   The botbot that wants to go into this cell
+       *  initialize_object()
+       *  (object*) enterer   The object that wants to go into this cell
        *
-       *  given a botbot, locks the cell and attempts to place
-       *  the botbot into it
+       *  given a object, locks the cell and attempts to place
+       *  the object into it
        */
-      int initialize_bot(botbot* enterer) {
+      int initialize_object(_object* enterer) {
 
         while(pthread_mutex_trylock(&occupy_lock) != 0) sched_yield();
-        if(bot == NULL) {
-          bot = enterer;
+        if(object == NULL) {
+          object = enterer;
         }
         pthread_mutex_unlock(&occupy_lock);
    
-        return (bot == enterer);
+        return (object == enterer);
       }
 
       /**
-       *  botbot_terminated()
+       *  object_terminated()
        *
-       *  Called if the botbot moves or dies
+       *  Called if the object moves or dies
        */
-      void botbot_terminated() {
-        bot = NULL;
+      void object_terminated() {
+        object = NULL;
       }
 
       /**
@@ -106,8 +107,8 @@ namespace the_grid {
       /**
        * Getters
        */
-      botbot* get_botbot() {
-        return bot;
+      _obj* get_object() {
+        return object;
       }
       int get_row() {
         return row;
@@ -117,20 +118,21 @@ namespace the_grid {
       }
   };
 
+  template <typename _obj>
   class grid {
 
     /**
      *  GRID FIELDS
      */
     vector<vector <grid_cell> > vgrid;
-    map<botbot*, grid_cell*> live_bots;
+    map<_obj*, grid_cell*> live_bots;
 
     legacy_botbot* lg;
     cortex grid_cortex;
 
     pthread_mutex_t population_flux_lock;
 
-    int MAX_BOTBOTS;
+    int MAX_OBJECTS;
     int rows, cols;
     size_t cycles_passed;
     string white_space_filler;
