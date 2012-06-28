@@ -10,49 +10,6 @@
 
 using namespace bot_factory;
 
-namespace {
-
-    const int MAX_MULTIPLIER   = 4;
-    const int MIN_NUTS_TO_LOSE = 5;
-    const int SURRENDER_MOD    = 3;
-    botbot* battleBots(botbot *botA, botbot *botB)
-    {
-        // roll dice for random multipliers!
-        int nutMultA  = rand() % MAX_MULTIPLIER;
-        int nutMultB  = rand() % MAX_MULTIPLIER;
-        int boltMultA = rand() % MAX_MULTIPLIER;
-        int boltMultB = rand() % MAX_MULTIPLIER;
-
-        int botAScore = botA->nuts() * nutMultA + botA->bolts() * boltMultA;
-        int botBScore = botB->nuts() * nutMultB + botB->bolts() * boltMultB;
-
-        botbot *winner  = (botAScore < botBScore) ? botB : botA;
-        int winnerScore = max(botAScore, botBScore);
-        botbot *loser   = (botAScore > botBScore) ? botB : botA;
-        int loserScore  = max(botBScore, botAScore);
-
-        // We must punish the loser and reward the winner
-
-        // But first...if the loser is far overpowered, we give him a chance to
-        // escape
-        if (loserScore < winnerScore/2 && (rand() % SURRENDER_MOD) == 0) {
-            return winner;
-        }
-
-        // Transfer some nuts and bolts to the winner
-        int numNutsToLose  = (loser->nuts() < MIN_NUTS_TO_LOSE)
-                           ? loser->nuts() : rand() % (loser->nuts() / 2);
-        int numBoltsToLose = (loser->bolts() < MIN_NUTS_TO_LOSE)
-                           ? loser->bolts() : rand() % (loser->bolts() / 2);
-
-        loser->nuts()   -= numNutsToLose;
-        winner->nuts()  += numNutsToLose;
-        loser->bolts()  -= numBoltsToLose;
-        winner->bolts() += numBoltsToLose;
-
-        return winner;
-    }
-}
 
 namespace the_grid {
 
@@ -531,7 +488,7 @@ namespace the_grid {
           }
 
           if (!dead_bots.empty()) {
-              cout << endl << "Fallen Bots: " << endl;
+              cout << endl << endl << "Fallen Bots: " << endl;
               col = 1;
               map<botbot*, int>::iterator it;
               for (it = dead_bots.begin(); it != dead_bots.end(); ++it, ++col)
