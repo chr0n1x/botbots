@@ -1,21 +1,36 @@
 #include <iostream>
-#include "internals.hpp"
-#include "cortex.hpp"
+#include "internals.h"
+#include "cortex.h"
 
 using namespace std;
 using namespace the_cortex;
 
 #define ELEMENTS  125000
+#define POINTLESSNESS 100
 #define BENCHMARK true
 
+namespace {
+    void wasteTimeWithMath(double *mod, int num)
+    {
+        for (int i = 0; i < POINTLESSNESS; ++i) {
+            *mod = *mod * num / num + num - num;
+        }
+    }
+}
 /**
  *  Polymorphic classes
  */
 class object {
-  double blah;
   public:
-    virtual void func1() { if(!BENCHMARK) cout << "obj -- func1"; }
-    virtual void func2() { if(!BENCHMARK) cout << "obj -- func2"; }
+    double blah;
+    virtual void func1() {
+        wasteTimeWithMath(&blah, 2);
+        if(!BENCHMARK) cout << "obj -- func1 -- blah = " << blah << endl;
+    }
+    virtual void func2() {
+        wasteTimeWithMath(&blah, 3);
+        if(!BENCHMARK) cout << "obj -- func2 -- blah = " << blah << endl;
+    }
     void set_blah(double in) {
       blah = in;
     }
@@ -23,14 +38,26 @@ class object {
 
 class foo : public object {
   public:
-    void func1() { if(!BENCHMARK) cout << "foo -- func1"; }
-    void func2() { if(!BENCHMARK) cout << "foo -- func2"; }
+    void func1() {
+        wasteTimeWithMath(&blah, 4);
+        if(!BENCHMARK) cout << "foo -- func1 -- blah = " << blah << endl;
+    }
+    void func2() {
+        wasteTimeWithMath(&blah, 5);
+        if(!BENCHMARK) cout << "foo -- func2 -- blah = " << blah << endl;
+    }
 };
 
 class bar : public object {
   public:
-    void func1() { if(!BENCHMARK) cout << "bar -- func1"; }
-    void func2() { if(!BENCHMARK) cout << "bar -- func2"; }
+    void func1() {
+        wasteTimeWithMath(&blah, 2);
+        if(!BENCHMARK) cout << "bar -- func1 -- blah = " << blah << endl;
+    }
+    void func2() {
+        wasteTimeWithMath(&blah, 2);
+        if(!BENCHMARK) cout << "bar -- func2 -- blah = " << blah << endl;
+    }
 };
 
 /**

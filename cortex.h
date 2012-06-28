@@ -1,13 +1,13 @@
 #ifndef __CORTEX
 #define __CORTEX
 
-#include "internals.hpp"
-#include "ts_queue.hpp"
+#include "internals.h"
+#include "ts_queue.h"
 
 namespace the_cortex {
 
   void* _cortex_thread(void*);
-  static const int MAX_CORTEX_THREADS = 4;
+  static const int MAX_CORTEX_THREADS = 2;
 
   /**
    *  CLASS: cortex
@@ -65,7 +65,7 @@ namespace the_cortex {
     ts_queue<cortex_object> gate;
     pthread_t workers[MAX_CORTEX_THREADS];
     bool workers_running;
- 
+
     public:
 
       cortex() {
@@ -78,7 +78,8 @@ namespace the_cortex {
 
       /**
        *  queue_task()
-       *  (void*) (*thread_func)(void*) pointer to the function that knows how to handle
+       *  (void*) (*thread_func)(void*) pointer to the function that knows how
+       *  to handle
        *  (_obj*) object, the data to be processed
        *
        *  Given a function pointer and the argument that it requires,
@@ -93,10 +94,11 @@ namespace the_cortex {
       /**
        *  process_next_gate_element()
        */
-      void process_next_gate_element() {
-        cortex_object co = gate.back_pop();
-        if(co.functional())
-          co.execute();
+      bool process_next_gate_element() {
+          cortex_object co = gate.back_pop();
+          if(co.functional())
+              co.execute();
+          return co.functional();
       }
 
       /**
@@ -116,7 +118,7 @@ namespace the_cortex {
        *  (bool) set The value to set workers_running to
        *
        *  Sets the workers_running flag
-       *  Based on the new state of the flag, the threads are 
+       *  Based on the new state of the flag, the threads are
        *  Either re-created or joined with the main thread.
        */
       void set_process_flag(bool set) {
@@ -132,7 +134,7 @@ namespace the_cortex {
             pthread_create( &workers[i], NULL, _cortex_thread, arg );
           }
         }
-        // wait for workers to join 
+        // wait for workers to join
         else {
           for(int i=0; i < MAX_CORTEX_THREADS; ++i) {
             pthread_join( workers[i], NULL );
@@ -179,12 +181,16 @@ namespace the_cortex {
    *  Thread function that the workers use to access the cortex that they
    *  belong to and process the next cortex_object
    */
-  void* _cortex_thread(void* arg) {
-    cortex* core = (cortex*) arg;
-    while(core->process_signal()) {
-      core->process_next_gate_element();
-    }
-    return NULL;
+  void* _cortex_thread(void* arg)
+  {
+      cortex* core = (cortex*) arg;
+      while(core->process_signal())
+      {
+          if (!core->process_next_gate_element()) {
+              sched_yield();
+          }
+      }
+      return NULL;
   }
 }
 

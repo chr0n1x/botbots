@@ -1,4 +1,4 @@
-#include "grid.hpp"
+#include "grid.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -7,7 +7,9 @@
 
 using namespace std;
 
-int main(int argc, char ** argv) {
+int main(int argc, char ** argv)
+{
+  srand( time(NULL) );
 
   int grid_rows = 0;
   int grid_cols = 0;
@@ -21,7 +23,8 @@ int main(int argc, char ** argv) {
   g.fill_to_capacity();
 
   initscr();
-  while(g.botbot_count() > 0) {
+  while(g.botbot_count() > 0)
+  {
     erase();
     g.initiate_cycle();
     printw(g.to_string().c_str());
