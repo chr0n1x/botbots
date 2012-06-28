@@ -244,7 +244,7 @@ namespace the_grid {
                 // there is another botbot here --
                 // FIGHT
                 else {
-                    botbot* winner = battleBots(occupying_bot, bot);
+                    botbot* winner = botbot::battleBots(occupying_bot, bot);
 
                     if (winner == bot) {
                         from_cell->botbot_terminated();
