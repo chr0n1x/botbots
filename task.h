@@ -1,5 +1,8 @@
 // task.h
 
+#ifndef INCLUDED_TASK_H
+#define INCLUDED_TASK_H
+
 // This class defines a protocol for a function that is bound with zero or more
 // arguments.
 
@@ -17,3 +20,5 @@ class Task
 };
 
 }
+
+#endif

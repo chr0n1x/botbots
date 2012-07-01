@@ -27,10 +27,38 @@ class Mutex
     int unlock();
 };
 
+class MutexGuard
+{
+    Mutex *d_mutex;
+
+  public:
+    MutexGuard(Mutex *mutex);
+    ~MutexGuard();
+};
 
 //============================================================================
 //                             INLINE DEFINITIONS
 //============================================================================
+
+                             //=================
+                             // class MutexGuard
+                             //=================
+inline
+MutexGuard::MutexGuard(Mutex *mutex)
+: d_mutex(mutex)
+{
+    d_mutex->lock();
+}
+
+inline
+MutexGuard::~MutexGuard()
+{
+    d_mutex->unlock();
+}
+
+                             //============
+                             // class Mutex
+                             //============
 
 inline
 Mutex::Mutex()
