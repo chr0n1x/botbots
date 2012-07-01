@@ -115,16 +115,22 @@ void Cortex::start()
 */
 void Cortex::stop()
 {
+    /*
     if (!d_processing) {
         return;
     }
+    */
 
-    d_processing = false;
+    if (d_processing) {
+      d_processing = false;
 
-    for(int i=0; i < d_workers.size(); ++i)
-    {
-        pthread_join(d_workers[i], NULL);
+      for(int i=0; i < d_workers.size(); ++i)
+      {
+          pthread_join(d_workers[i], NULL);
+      }
     }
+
+    return;
 }
 
 
