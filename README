@@ -1,0 +1,29 @@
+-- SETUP --
+
+YOU CAN FIND INFORMATION ON NCURSES HERE: http://www.gnu.org/software/ncurses/
+
+* Go into ncurses and install if you do not have it already:
+  * cd ncurses-5.9
+  * ./configure
+  * make
+  * sudo make install
+
+* Back to parent directory
+  * make botbots
+  * ./botbots
+
+-- ETC --
+
+The default dimensions of the grid itself are currently 5x5.
+The main interest of this project at the moment is the thread queue that can take any kind of object. It started with me just wanted to play with threads.
+I just ended up created an ADT-like object called the Cortex, which takes specialized_cortex_objects<> that inherit properties from a generic cortex_object class.
+
+Fun and games start there. Things are still in progress.
+This project is more for the sake of learning than it is for any practical application (although I might use my cortex for other projects?). Maybe other ideas will arise during its development.
+
+Find any bugs? SEGFAULTs? Suggestions? Email me at heilong24@gmail.com
+
+-- THANKS --
+
+genKeen - friend and teacher. Gonna make a man outta me by teaching me more C++
+aakside - friend and fellow dreamer. We're gonna get somewhere, someday, bro.
