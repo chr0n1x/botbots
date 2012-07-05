@@ -6,8 +6,8 @@
 using namespace std;
 using namespace the_cortex;
 
-#define ELEMENTS   125000
-#define POINTLESSNESS 100
+#define ELEMENTS   25000
+#define POINTLESSNESS 15000
 #define BENCHMARK true
 
 namespace {
@@ -92,21 +92,24 @@ void fill(Cortex &c, object *b, object *f) {
  */
 int main(int argc, char ** argv) {
 
-   int runs = 0;
-   if(argc == 2) {
+   int runs = 1;
+   int numThreads = 8;
+   if(argc >= 2) {
       runs = atoi(argv[1]);
    }
-   else {
-      runs = 1;
+
+   if (3 <= argc) {
+       numThreads = atoi(argv[2]);
    }
 
-   Cortex c1, c2;
+   Cortex c1, c2(numThreads);
 
    double iterative_sum = 0;
    double threaded_sum = 0;
 
    cout << "Running " << runs << " passes for "
-        << 4*ELEMENTS << " elements..." << endl;
+        << 4*ELEMENTS << " elements..."
+        << "(" << numThreads << " threads)" << endl;
    for(int passes=0; passes<runs; ++passes) {
       // generate a new set of objects each iteration to prevent any compiler
       // optimizations
@@ -148,5 +151,7 @@ int main(int argc, char ** argv) {
         << " seconds" << endl;
    cout << "Threaded Avg:\t\t"  << threaded_sum / runs
         << " seconds" << endl;
+   cout << "Speedup = " << iterative_sum / threaded_sum << endl;
+   cout << "(Ideal speedup = " << numThreads << ")" << endl;
    return 0;
 }
