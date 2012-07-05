@@ -1,4 +1,5 @@
 #include "grid.h"
+#include <algorithm>
 
 using namespace the_grid;
 
@@ -275,51 +276,39 @@ grid::~grid() {
  *  MAX_BOTBOTS) Returns a boolean based on success or failure
  */
 bool grid::fill_to_capacity() {
-  if(live_bots.size() >= MAX_BOTBOTS) {
-      return false;
-  }
-  for(int i=0; i<MAX_BOTBOTS; ++i) {
-      create_botizen();
-  }
-  return true;
-}
+    if(live_bots.size() >= MAX_BOTBOTS) {
+        return false;
+    }
 
+    // create vector of open cells
+    vector<grid_cell*> empty_cells;
+    for(int i = 0; i < vgrid.size(); ++i)
+    {
+        vector<grid_cell>& currRow = vgrid[i];
+        for(int j = 0; j < currRow.size(); ++j)
+        {
+            if (currRow[j].get_botbot() == NULL) {
+                empty_cells.push_back(&currRow[j]);
+            }
+        }
+    }
 
-/**
- *  create_botizen()
- *
- *  Makes a botbot and throws it onto the grid
- */
-bool grid::create_botizen()
-{
-  bool ret;
-  if (live_bots.size() == rows*cols
-   || live_bots.size() >= MAX_BOTBOTS)
-  {
-      ret = false;
-  }
-  else {
-      botbot* b = new botbot();
-      b->assign_gen(lg->increase_generations());
-      int x, y;
-      do {
-          x = rand() % rows;
-          y = rand() % cols;
-      }
-      while(vgrid[x][y].get_botbot() != NULL);
+    // mix that shit up
+    random_shuffle(empty_cells.begin(), empty_cells.end());
 
-      if(vgrid[x][y].initialize_bot(b)) {
-          b->set_current_cell(x, y);
-          add_botbot_to_list(b, &vgrid[x][y]);
-          ret = true;
-      }
-      else {
-          delete b;
-          ret = false;
-      }
-  }
+    int numNewBots = (MAX_BOTBOTS < empty_cells.size()) ? MAX_BOTBOTS
+                                                        : empty_cells.size();
 
-  return ret;
+    for(int i = 0; i < numNewBots; ++i)
+    {
+        grid_cell* cell = empty_cells[i];
+        botbot* b = new botbot();
+        b->assign_gen(lg->increase_generations());
+        cell->initialize_bot(b);
+        b->set_current_cell(cell->get_row(), cell->get_col());
+        add_botbot_to_list(b, cell);
+    }
+    return true;
 }
 
 /**
