@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cassert>
 
-using namespace the_grid;
+namespace the_grid {
 
 //---------------------------------------------------
 // GridCell CLASS
@@ -462,3 +462,5 @@ string Grid::stats_to_string()
     ss << "Dead Bots: " << dead_bots.size() << endl;
     return ss.str();
 }
+
+} // end of namespace the_grid
