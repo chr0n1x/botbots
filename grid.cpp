@@ -200,7 +200,7 @@ void grid::cmd_goto_coordinates() {
 
           // there is another botbot here --
           // FIGHT
-          else {
+          else if (battle_bots) {
               botbot* winner = botbot::battleBots(occupying_bot, bot);
 
               if (winner == bot) {
@@ -244,10 +244,11 @@ void grid::cmd_goto_coordinates() {
 grid::grid() {
   rows = DEFAULT_GRID_DIM;
   cols = DEFAULT_GRID_DIM;
+  battle_bots = false;
   this->initialize();
 }
 
-grid::grid(int in_rows, int in_cols) {
+grid::grid(int in_rows, int in_cols, bool fish_tank_mode) {
   if(in_rows < DEFAULT_GRID_DIM) {
       in_rows = DEFAULT_GRID_DIM;
   }
@@ -257,6 +258,8 @@ grid::grid(int in_rows, int in_cols) {
       in_cols = DEFAULT_GRID_DIM;
   }
   cols = in_cols;
+
+  battle_bots = !fish_tank_mode;
 
   this->initialize();
 }
@@ -392,7 +395,6 @@ string grid::to_string() {
     // TODO: think of a way to encapsulate this in a class or classes
     stringstream buffer;
     streambuf * def = cout.rdbuf(buffer.rdbuf());
-    //cout << setfill(' ') << setw(line_width);
 
     for(int i=0; i<rows; ++i) {
 
@@ -414,6 +416,10 @@ string grid::to_string() {
     cout << endl << "----- " << live_bots.size()
          << " BotBots Online (" << cycles_passed << " Cycles) -----";
     cout << endl << endl << population_to_string() << endl;
+
+    if(!battle_bots) {
+      cout << endl << "FISH TANK MODE" << endl;
+    }
 
     string ret = buffer.str();
     cout.rdbuf(def);

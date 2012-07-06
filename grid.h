@@ -28,10 +28,10 @@ namespace the_grid {
    *  a single grid_cell)
    */
   class grid_cell {
-    int          id;
-    int          row, col;
-    botbot*      bot;
-    mutex::Mutex occupy_lock;
+    int           id;
+    int           row, col;
+    botbot*       bot;
+    mutex::Mutex  occupy_lock;
 
     public:
 
@@ -56,6 +56,7 @@ namespace the_grid {
 
   class grid {
 
+    bool                        battle_bots;
     vector<vector <grid_cell> > vgrid;
     map<botbot*, grid_cell*>    live_bots;
     map<botbot*, int>           dead_bots;
@@ -80,7 +81,7 @@ namespace the_grid {
 
       grid();
 
-      grid(int in_rows, int in_cols);
+      grid(int in_rows, int in_cols, bool fish_tank_mode);
 
       ~grid();
 
