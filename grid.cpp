@@ -4,17 +4,17 @@
 using namespace the_grid;
 
 //---------------------------------------------------
-// grid_cell CLASS
+// GridCell CLASS
 //---------------------------------------------------
 
-grid_cell::grid_cell() {
+GridCell::GridCell() {
   bot = NULL;
   id = 0;
   row = 0;
   col = 0;
 }
 
-grid_cell::~grid_cell() {
+GridCell::~GridCell() {
     delete bot;
 }
 
@@ -26,12 +26,12 @@ grid_cell::~grid_cell() {
  *
  *  Just initializes the cell with an id and the coordinates
  */
-int grid_cell::initialize(int assigned_id, int x, int y) {
-  if(bot == NULL) {
-    id = assigned_id;
-    row = x;
-    col = y;
-  }
+int GridCell::initialize(int assigned_id, int x, int y) {
+    if(bot == NULL) {
+        id = assigned_id;
+        row = x;
+        col = y;
+    }
 }
 
 /**
@@ -41,7 +41,7 @@ int grid_cell::initialize(int assigned_id, int x, int y) {
  *  given a botbot, locks the cell and attempts to place
  *  the botbot into it
  */
-int grid_cell::initialize_bot(botbot* enterer)
+int GridCell::initialize_bot(botbot* enterer)
 {
     if(bot == NULL) {
         bot = enterer;
@@ -54,7 +54,7 @@ int grid_cell::initialize_bot(botbot* enterer)
  *
  *  Called if the botbot moves or dies
  */
-void grid_cell::botbot_terminated() {
+void GridCell::botbot_terminated() {
     bot = NULL;
 }
 
@@ -63,31 +63,31 @@ void grid_cell::botbot_terminated() {
  *
  *  Returns the coordinates in string format
  */
-string grid_cell::coordinates() {
-  char carr[32];
-  sprintf(carr, "(%d, %d)", row+1, col+1);
-  const char * cc = carr;
-  return string(cc);
+string GridCell::coordinates() {
+    char carr[32];
+    sprintf(carr, "(%d, %d)", row+1, col+1);
+    const char * cc = carr;
+    return string(cc);
 }
 
 /**
  * Getters
  */
-botbot* grid_cell::get_botbot() {
-  return bot;
+botbot* GridCell::get_botbot() {
+    return bot;
 }
 
-int grid_cell::get_row() {
-  return row;
+int GridCell::get_row() {
+    return row;
 }
 
-int grid_cell::get_col() {
-  return col;
+int GridCell::get_col() {
+    return col;
 }
 
 
 //---------------------------------------------------
-// grid CLASS
+// Grid CLASS
 //---------------------------------------------------
 
 //---------------------------------------------------
@@ -100,17 +100,18 @@ int grid_cell::get_col() {
  *  function that just builds the grid...moved to a separate function
  *  to keep the constructors DRY
  */
-void grid::initialize() {
-  lg = new legacy_botbot();
-  cycles_passed = 0;
+void Grid::initialize()
+{
+    lg = new legacy_botbot();
+    cycles_passed = 0;
 
-  MAX_BOTBOTS = rows*cols / 5;
+    MAX_BOTBOTS = rows*cols / 5;
 
-  vgrid.resize(rows);
+    vgrid.resize(rows);
 
-  grid_cell base_cell;
-  int cell_count = 0;
-  for(int i=0; i<rows; ++i)
+    GridCell base_cell;
+    int cell_count = 0;
+    for(int i=0; i<rows; ++i)
     {
         for(int j=0; j<cols; ++j)
         {
@@ -124,114 +125,84 @@ void grid::initialize() {
 /**
  *  add_botbot_to_list()
  *  (botbot*)     bot         The botbot and...
- *  (grid_cell*)  cell        His cell
+ *  (GridCell*)  cell        His cell
  *
- *  Keeping record of botbots and what grid_cells they're assigned to
+ *  Keeping record of botbots and what GridCells they're assigned to
  *  When botbots move, the goto function will handle keeping track of
  *  all that
  */
-void grid::add_botbot_to_list(botbot* bot, grid_cell* cell) {
-  population_flux_lock.lock();
-  live_bots.insert( pair<botbot*, grid_cell*>(bot, cell) );
-  population_flux_lock.unlock();
+void Grid::add_botbot_to_list(botbot* bot, GridCell* cell) {
+    population_flux_lock.lock();
+    live_bots.insert( pair<botbot*, GridCell*>(bot, cell) );
+    population_flux_lock.unlock();
 }
 
 /**
- *  cmd_decide_coordinates()
- *
- *  Makes all botbots decide on a coordinate that they want to go to
- */
-bool grid::cmd_decide_coordinates() {
-  map<botbot*, grid_cell*>::iterator it = live_bots.begin();
-  for(it; it != live_bots.end(); ++it) {
-    it->first->decide_movement();
-  }
-  return true;
-}
-
-/**
- *  cmd_goto_coordinates()
- *
- *  cmd_decide_coordinates() should be called before this
- *  so that the botbots have desired coordinates to go to
+ *  move_bots()
  *
  *  All botbots attempt to move to their desired coordinates
  *  Otherwise, they do not move...?
  *  The main thread halts for this process
  */
-void grid::cmd_goto_coordinates() {
-  for(int i=0; i<rows; ++i)
-  {
-      for(int j=0; j<cols; ++j)
-      {
-          botbot * bot = vgrid[i][j].get_botbot();
+void Grid::move_bots() {
+    for(botGridMap::iterator it = live_bots.begin(); it != live_bots.end();)
+    {
+        botbot *bot = it->first;
+        GridCell *old_cell = it->second;
 
-          if (bot == NULL) continue;
+        // increment 'it' before deletion invalidates it
+        ++it;
 
-          // case where the bot tries to go out of the grid
-          // dirty traitors...
-          bool out_of_bounds = (bot->get_col() < 0
-                             || bot->get_col() >= cols)
-                             || (bot->get_row() < 0
-                             || bot->get_row() >= rows);
+        bot->decide_movement();
 
-          if(out_of_bounds) {
-              bot->set_current_cell(i, j);
-              continue;
-          }
+        // case where the bot tries to go out of the grid
+        // dirty traitors...
+        bool out_of_bounds = (bot->get_col() < 0
+                           || bot->get_col() >= cols)
+                           || (bot->get_row() < 0
+                           || bot->get_row() >= rows);
 
-          grid_cell* from_cell = live_bots[bot];
-          grid_cell* to_cell = &vgrid[bot->get_row()][bot->get_col()];
-          botbot* occupying_bot = to_cell->get_botbot();
+        if(out_of_bounds) {
+            bot->set_current_cell(old_cell->get_row(), old_cell->get_col());
+            continue;
+        }
 
-          if(occupying_bot == NULL) {
-              // attempt to initialize cell with botbot
-              if(to_cell->initialize_bot(bot)) {
-                  from_cell->botbot_terminated();
-                  live_bots[bot] = to_cell;
-              }
-              else {
-                  // bad luck, mate
-                  from_cell->botbot_terminated();
-                  to_cell->botbot_terminated();
-                  live_bots.erase(bot);
-                  dead_bots[bot] = cycles_passed;
-              }
-          }
+        GridCell* new_cell = &vgrid[bot->get_row()][bot->get_col()];
+        botbot* occupying_bot = new_cell->get_botbot();
 
-          // there is another botbot here --
-          // FIGHT
-          else if (battle_bots) {
-              botbot* winner = botbot::battleBots(occupying_bot, bot);
+        if(occupying_bot == NULL) {
+            // attempt to initialize cell with botbot
+            new_cell->initialize_bot(bot);
+            old_cell->botbot_terminated();
+            live_bots[bot] = new_cell;
+        }
+        else if (occupying_bot == bot) {
+            continue;
+        }
+        // there is another botbot here --
+        // FIGHT
+        else if (battle_bots) {
+            botbot *winner = botbot::battleBots(occupying_bot, bot, events);
+            botbot *loser  = (bot == winner) ? occupying_bot : bot;
 
-              if (winner == bot) {
-                  from_cell->botbot_terminated();
-                  to_cell->botbot_terminated();
-                  to_cell->initialize_bot(bot);
-                  live_bots[bot] = to_cell;
+            old_cell->botbot_terminated();
+            new_cell->botbot_terminated();
+            new_cell->initialize_bot(winner);
+            live_bots[winner] = new_cell;
 
-                  if (occupying_bot->nuts()  == 0
-                   && occupying_bot->bolts() == 0)
-                  {
-                      live_bots.erase(occupying_bot);
-                      dead_bots[occupying_bot] = cycles_passed;
-                  }
-                  else {
-                      from_cell->initialize_bot(occupying_bot);
-                      occupying_bot->set_current_cell(i, j);
-                      live_bots[occupying_bot] = from_cell;
-                  }
-              } else if (bot->nuts() == 0 && bot->bolts() == 0) {
-                  from_cell->botbot_terminated();
-                  live_bots.erase(bot);
-                  dead_bots[bot] = cycles_passed;
-              }
-              else {
-                  bot->set_current_cell(i, j);
-              }
-          }
-      }
-  }
+            if (loser->nuts() == 0 && loser->bolts() == 0)
+            {
+                live_bots.erase(loser);
+                dead_bots.push_back(pair<botbot*,int>(loser, cycles_passed));
+            }
+            else {
+                old_cell->initialize_bot(loser);
+                loser->set_current_cell(old_cell->get_row(),
+                                        old_cell->get_col());
+                live_bots[loser] = old_cell;
+            }
+        }
+    }
 }
 
 
@@ -242,31 +213,36 @@ void grid::cmd_goto_coordinates() {
 /**
  *  default and explicit constructors, destructor
  */
-grid::grid() {
-  rows = DEFAULT_GRID_DIM;
-  cols = DEFAULT_GRID_DIM;
-  battle_bots = false;
-  this->initialize();
+Grid::Grid() {
+    rows = DEFAULT_GRID_DIM;
+    cols = DEFAULT_GRID_DIM;
+    battle_bots = false;
+    this->initialize();
 }
 
-grid::grid(int in_rows, int in_cols, bool fish_tank_mode) {
-  if(in_rows < DEFAULT_GRID_DIM) {
-      in_rows = DEFAULT_GRID_DIM;
-  }
-  rows = in_rows;
+Grid::Grid(int in_rows, int in_cols) {
+    if(in_rows < DEFAULT_GRID_DIM) {
+        in_rows = DEFAULT_GRID_DIM;
+    }
+    rows = in_rows;
 
-  if(in_cols < DEFAULT_GRID_DIM) {
-      in_cols = DEFAULT_GRID_DIM;
-  }
-  cols = in_cols;
+    if(in_cols < DEFAULT_GRID_DIM) {
+        in_cols = DEFAULT_GRID_DIM;
+    }
+    cols = in_cols;
 
   battle_bots = !fish_tank_mode;
 
   this->initialize();
 }
 
-grid::~grid() {
-  delete lg;
+Grid::~Grid() {
+    delete lg;
+}
+
+void Grid::hold_events(vector<events::Event*> *eventsPtr)
+{
+    events = eventsPtr;
 }
 
 /**
@@ -275,16 +251,16 @@ grid::~grid() {
  *  Inserts botbots into the grid until it's to capacity (based on
  *  MAX_BOTBOTS) Returns a boolean based on success or failure
  */
-bool grid::fill_to_capacity() {
+bool Grid::fill_to_capacity() {
     if(live_bots.size() >= MAX_BOTBOTS) {
         return false;
     }
 
     // create vector of open cells
-    vector<grid_cell*> empty_cells;
+    vector<GridCell*> empty_cells;
     for(int i = 0; i < vgrid.size(); ++i)
     {
-        vector<grid_cell>& currRow = vgrid[i];
+        vector<GridCell>& currRow = vgrid[i];
         for(int j = 0; j < currRow.size(); ++j)
         {
             if (currRow[j].get_botbot() == NULL) {
@@ -301,7 +277,7 @@ bool grid::fill_to_capacity() {
 
     for(int i = 0; i < numNewBots; ++i)
     {
-        grid_cell* cell = empty_cells[i];
+        GridCell* cell = empty_cells[i];
         botbot* b = new botbot();
         b->assign_gen(lg->increase_generations());
         cell->initialize_bot(b);
@@ -319,30 +295,29 @@ bool grid::fill_to_capacity() {
  *
  *  botbots settle their own disputes
  *
- *  TODO: Make this wake when tasks are complete, instead of sleeping for a flat second
+ *  TODO: Make this wake when tasks are complete, instead of sleeping for a
+ *  flat second
  *        Also, maybe have the grid calculate the average cycle duration...?
  */
-bool grid::initiate_cycle() {
-  if (live_bots.size() > 1) {
-      ++cycles_passed;
-      cmd_decide_coordinates();
-      cmd_goto_coordinates();
-  }
-  sleep(1);
+bool Grid::initiate_cycle() {
+    if (live_bots.size() > 1) {
+        ++cycles_passed;
+        move_bots();
+    }
 }
 
 /**
  * Getters
  */
-int grid::cell_count() {
+int Grid::cell_count() {
   return rows*cols;
 }
 
-int grid::botbot_count() {
+int Grid::botbot_count() {
   return live_bots.size();
 }
 
-size_t grid::grid_cycles() {
+size_t Grid::grid_cycles() {
   return cycles_passed;
 }
 
@@ -352,7 +327,7 @@ size_t grid::grid_cycles() {
  *  Based on any name of any botbot, returns the length that a line
  *  should be based on the length of the name and the number of columns
  */
-int grid::row_width() {
+int Grid::row_width() {
   int ret = 0;
   if(live_bots.size() > 0) {
       ret = ((live_bots.begin()->first->name()).length()) / cols;
@@ -365,13 +340,13 @@ int grid::row_width() {
  *
  * Does what it says, says what it does...?
  */
-string grid::to_string() {
+string Grid::to_string() {
   if(live_bots.size() > 0) {
     int line_width = row_width();
 
     // get max bot name length
     int maxNameLength = 0;
-    for(map<botbot*, grid_cell*>::iterator it = live_bots.begin();
+    for(botGridMap::iterator it = live_bots.begin();
         it != live_bots.end();
         ++it)
     {
@@ -422,7 +397,7 @@ string grid::to_string() {
  *
  *  SAYS WHAT IT DOES, DEFINITELY DOES WHAT IT SAYS
  */
-string grid::population_to_string() {
+string Grid::population_to_string() {
   int line_width = row_width();
 
   // TODO: think of a way to encapsulate this in a class or classes
@@ -433,7 +408,7 @@ string grid::population_to_string() {
   if(live_bots.empty())
     cout << "No botbots in grid" << endl;
   else {
-    map<botbot*, grid_cell*>::iterator it = live_bots.begin();
+    botGridMap::iterator it = live_bots.begin();
     int col = 1;
     int numCols = cols/3;
     cout << "Living botbots: " << endl;
@@ -448,7 +423,7 @@ string grid::population_to_string() {
     if (!dead_bots.empty()) {
         cout << endl << endl << "Fallen Bots: " << endl;
         col = 1;
-        map<botbot*, int>::iterator it;
+        vector< pair<botbot*, int> >::iterator it;
         for (it = dead_bots.begin(); it != dead_bots.end(); ++it, ++col)
         {
             cout << it->second << "\t\t"
@@ -457,7 +432,7 @@ string grid::population_to_string() {
         }
     }
     if (live_bots.size() == 1) {
-        cout << "Winner is " << live_bots.begin()->first->orig_name()
+        cout << endl << "Winner is " << live_bots.begin()->first->orig_name()
              << "!!" << endl;
     }
   }

@@ -3,6 +3,9 @@
 
 #include "internals.h"
 #include "mutex.h"
+#include "event.h"
+
+#include <vector>
 
 namespace bot_factory {
 
@@ -61,7 +64,9 @@ namespace bot_factory {
 
       int& bolts();
 
-      static botbot* battleBots(botbot *botA, botbot *botB);
+      static botbot* battleBots(botbot *botA,
+                                botbot *botB,
+                                vector<events::Event*> *events);
   };
 
   /**

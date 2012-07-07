@@ -6,103 +6,102 @@
 
 #include "internals.h"
 #include "botbot.h"
-
+#include "event.h"
 
 using namespace bot_factory;
 
-
 namespace the_grid {
 
-  static const int  DEFAULT_GRID_DIM = 5;
-  static const bool FULL_THREAD = false;
+static const int  DEFAULT_GRID_DIM = 5;
+static const bool FULL_THREAD = false;
 
-  void *_botbot_creation_thread(void*);
-  void *_botbot_decision_thread(void*);
+/**
+ *  CLASS: GridCell
+ *  Most basic unit of the grid
+ *
+ *  Implements a mutex to prevent multiple botbots from
+ *  trying to occupy it (at most 2 botbots can interact over
+ *  a single GridCell)
+ */
 
-  /**
-   *  CLASS: grid_cell
-   *  Most basic unit of the grid
-   *
-   *  Implements a mutex to prevent multiple botbots from
-   *  trying to occupy it (at most 2 botbots can interact over
-   *  a single grid_cell)
-   */
-  class grid_cell {
-    int           id;
-    int           row, col;
-    botbot*       bot;
-    mutex::Mutex  occupy_lock;
+class GridCell {
+  int          id;
+  int          row, col;
+  botbot*      bot;
+  mutex::Mutex occupy_lock;
 
-    public:
+  public:
 
-      grid_cell();
+    GridCell();
 
-      ~grid_cell();
+    ~GridCell();
 
-      int initialize(int assigned_id, int x, int y);
+    int initialize(int assigned_id, int x, int y);
 
-      int initialize_bot(botbot* enterer);
+    int initialize_bot(botbot* enterer);
 
-      void botbot_terminated();
+    void botbot_terminated();
 
-      string coordinates();
+    string coordinates();
 
-      botbot* get_botbot();
+    botbot* get_botbot();
 
-      int get_row();
+    int get_row();
 
-      int get_col();
-  };
+    int get_col();
+};
 
-  class grid {
+class Grid {
 
-    bool                        battle_bots;
-    vector<vector <grid_cell> > vgrid;
-    map<botbot*, grid_cell*>    live_bots;
-    map<botbot*, int>           dead_bots;
+  typedef map<botbot*, GridCell*> botGridMap;
 
-    legacy_botbot* lg;
+  // PRIVATE DATA
+  bool                          battle_bots;
+  vector<vector <GridCell> >    vgrid;
+  map<botbot*, GridCell*>       live_bots;
+  vector< pair<botbot*, int> >  dead_bots;
+  legacy_botbot                *lg;
+  mutex::Mutex                  population_flux_lock;
+  int                           MAX_BOTBOTS;
+  int                           rows, cols;
+  size_t                        cycles_passed;
+  vector<events::Event *>      *events;
 
-    mutex::Mutex population_flux_lock;
+  // PRIVATE MANIPULATORS
+  void initialize();
 
-    int MAX_BOTBOTS;
-    int rows, cols;
-    size_t cycles_passed;
+  void add_botbot_to_list(botbot* bot, GridCell* cell);
 
-    void initialize();
+  void move_bots();
 
-    void add_botbot_to_list(botbot* bot, grid_cell* cell);
+  public:
 
-    bool cmd_decide_coordinates();
+    Grid();
 
-    void cmd_goto_coordinates();
+    Grid(int in_rows, int in_cols, bool fish_tank_mode);
 
-    public:
+    ~Grid();
 
-      grid();
+    void hold_events(vector<events::Event *> *events);
 
-      grid(int in_rows, int in_cols, bool fish_tank_mode);
+    bool fill_to_capacity();
 
-      ~grid();
+    bool create_botizen();
 
-      bool fill_to_capacity();
+    bool initiate_cycle();
 
-      bool create_botizen();
+    int cell_count();
 
-      bool initiate_cycle();
+    int botbot_count();
 
-      int cell_count();
+    size_t grid_cycles();
 
-      int botbot_count();
+    int row_width();
 
-      size_t grid_cycles();
+    string to_string();
 
-      int row_width();
-
-      string to_string();
-
-      string population_to_string();
-  };
+    string population_to_string();
+};
 
 }
 

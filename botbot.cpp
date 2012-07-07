@@ -1,4 +1,5 @@
 #include "botbot.h"
+
 using namespace bot_factory;
 
 /**
@@ -21,10 +22,10 @@ botbot::~botbot() {}
  *  Dynamically generates the robot name based on it's fields
  */
 string botbot::name() {
-  char namec[32] = {'\0'};
-  sprintf(namec, "bb_n%02db%02d-v%d",
-          d_nuts, d_bolts, gen);
-  return namec;
+    char namec[32] = {'\0'};
+    sprintf(namec, "bb_n%02db%02d-v%d",
+            d_nuts, d_bolts, gen);
+    return namec;
 }
 
 string botbot::orig_name() {
@@ -80,7 +81,8 @@ int& botbot::bolts() {
 const int MAX_MULTIPLIER   = 4;
 const int MIN_NUTS_TO_LOSE = 5;
 const int SURRENDER_MOD    = 3;
-botbot* botbot::battleBots(botbot *botA, botbot *botB)
+botbot* botbot::battleBots(botbot *botA, botbot *botB,
+                           vector<events::Event*> *events)
 {
     // roll dice for random multipliers!
     int nutMultA  = rand() % MAX_MULTIPLIER;
@@ -114,6 +116,12 @@ botbot* botbot::battleBots(botbot *botA, botbot *botB)
     winner->nuts()  += numNutsToLose;
     loser->bolts()  -= numBoltsToLose;
     winner->bolts() += numBoltsToLose;
+
+    events::Event *battle = new events::BattleEvent(numNutsToLose,
+                                                    numBoltsToLose,
+                                                    winner->name(),
+                                                    loser->name());
+    events->push_back(battle);
 
     return winner;
 }
