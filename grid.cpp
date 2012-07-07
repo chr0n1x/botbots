@@ -220,7 +220,7 @@ Grid::Grid() {
     this->initialize();
 }
 
-Grid::Grid(int in_rows, int in_cols) {
+Grid::Grid(int in_rows, int in_cols, bool fish_tank_mode) {
     if(in_rows < DEFAULT_GRID_DIM) {
         in_rows = DEFAULT_GRID_DIM;
     }

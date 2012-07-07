@@ -6,7 +6,21 @@ using namespace std;
 namespace {
 
 const char happyBotBots[]    = "<insert happy robot ascii art here>";
-const char fightingBotBots[] = "<insert fighting robot ascii art here>";
+const char fightingBotBots[] = "|@|@|@|@|           |@|@|@|@|\n"
+                               "|@|@|@|@|   _____   |@|@|@|@|\n"
+                               "|@|@|@|@| /\\_T_T_/\\ |@|@|@|@|\n"
+                               "|@|@|@|@||/\\ T T /\\||@|@|@|@|\n"
+                               " ~/T~~T~||~\\/~T~\\/~||~T~~T\\~ \n"
+                               "  \\|__|_| \\(-(O)-)/ |_|__|/  \n"
+                               "  _| _|    \\\\8_8//    |_ |_  \n"
+                               "|(@)]   /~~[_____]~~\\   [(@)| TODO - get/make"
+                               " better ascii art\n"
+                               "  ~    (  |       |  )    ~  \n"
+                               "      [~` ]       [ '~]      \n"
+                               "      |~~|         |~~|      \n"
+                               "      |  |         |  |      \n"
+                               "     _<\\/>_       _<\\/>_     \n"
+                               "    /_====_\\     /_====_\\    \n";
 
 } // close unnamed namespace
 
