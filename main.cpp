@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <sstream>
 
 #include <ncurses.h>
 
@@ -11,6 +12,7 @@ using namespace std;
 
 namespace {
 const int MAX_EVENTS_PER_SCREEN = 2;
+int sleep_period = 1;
 
 void printEvents(vector<events::Event*>& events)
 {
@@ -25,22 +27,25 @@ void printEvents(vector<events::Event*>& events)
         hasMessages = true;
         if (numPrinted % MAX_EVENTS_PER_SCREEN == 0 && 0 != numPrinted) {
             hasMessages = false;
-            sleep(2);
+            sleep(2*sleep_period);
             erase();
         }
+        stringstream ss;
+        ss << "Event " << numPrinted+1 << " of " << events.size() << endl;
+        printw(ss.str().c_str());
         string eventStr = events[i]->animate_event();
         printw(eventStr.c_str());
         printw("\n-----------------------------------------\n");
         delete events[i];
         refresh();
-        sleep(1);
+        sleep(sleep_period);
 
         ++numPrinted;
     }
 
     if (hasMessages) {
         hasMessages = false;
-        sleep(2);
+        sleep(2*sleep_period);
         erase();
     }
 
@@ -56,26 +61,40 @@ int main(int argc, char ** argv)
     int  grid_rows = 0;
     int  grid_cols = 0;
     bool fish_tank = false;
+    bool display_events = true;
+    bool display_grid = true;
 
     if(argc >= 3) {
         grid_rows = atoi(argv[1]);
         grid_cols = atoi(argv[2]);
-        if (argc == 4) {
-            string option(argv[3]);
+        if (argc >= 4) {
+            for (int i = 3; i < argc; ++i)
+            {
+                string option(argv[i]);
 
-            int dash_pos = option.find("-", 0);
-            while(dash_pos != string::npos) {
-                option.erase(dash_pos, 1);
-                dash_pos = option.find("-", 0);
-            }
+                int dash_pos = option.find("-", 0);
+                while(dash_pos != string::npos) {
+                    option.erase(dash_pos, 1);
+                    dash_pos = option.find("-", 0);
+                }
 
-            fish_tank =
-                option.compare("fishtank") == 0 || option.compare("f") == 0;
-
-            if(!fish_tank) {
-                cout << "Unrecognized option: " << option
-                     << " ...stopping" << endl;
-                return 0;
+                if (option == "fishtank" || option == "f") {
+                    fish_tank = true;
+                }
+                else if (option == "nosleep" || option == "ff") {
+                    sleep_period = 0;
+                }
+                else if (option == "noevent" || option == "ne") {
+                    display_events = false;
+                }
+                else if (option == "nogrid" || option == "ng") {
+                    display_grid = false;
+                }
+                else {
+                    cout << "Unrecognized option: " << option
+                         << " ...stopping" << endl;
+                    return 0;
+                }
             }
         }
     }
@@ -92,15 +111,27 @@ int main(int argc, char ** argv)
     {
         erase();
         g.initiate_cycle();
-        printw(g.to_string().c_str());
+        if (display_grid) {
+            printw(g.to_string().c_str());
+        }
+        else {
+            printw(g.stats_to_string().c_str());
+        }
         refresh();
-        sleep(1);
+        sleep(sleep_period);
         clear();
-        printEvents(events);
+        if (display_events) {
+            printEvents(events);
+        }
     }
 
     erase();
-    printw(g.to_string().c_str());
+    if (display_grid) {
+        printw(g.to_string().c_str());
+    }
+    else {
+        printw(g.stats_to_string().c_str());
+    }
 
     printw("\nPress any key to exit\n");
 

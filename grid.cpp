@@ -1,5 +1,6 @@
 #include "grid.h"
 #include <algorithm>
+#include <cassert>
 
 using namespace the_grid;
 
@@ -149,8 +150,6 @@ void Grid::move_bots() {
     {
         botbot *bot = it->first;
         GridCell *old_cell = it->second;
-
-        // increment 'it' before deletion invalidates it
         ++it;
 
         bot->decide_movement();
@@ -172,9 +171,15 @@ void Grid::move_bots() {
 
         if(occupying_bot == NULL) {
             // attempt to initialize cell with botbot
-            new_cell->initialize_bot(bot);
-            old_cell->botbot_terminated();
-            live_bots[bot] = new_cell;
+            if (new_cell->initialize_bot(bot)) {
+                old_cell->botbot_terminated();
+                botGridMap::iterator botIt = live_bots.find(bot);
+                assert(botIt != live_bots.end());
+                botIt->second = new_cell;
+            } else {
+                bot->set_current_cell(old_cell->get_row(),
+                                      old_cell->get_col());
+            }
         }
         else if (occupying_bot == bot) {
             continue;
@@ -185,21 +190,28 @@ void Grid::move_bots() {
             botbot *winner = botbot::battleBots(occupying_bot, bot, events);
             botbot *loser  = (bot == winner) ? occupying_bot : bot;
 
+            botGridMap::iterator winnerIt = live_bots.find(winner);
+            botGridMap::iterator loserIt  = live_bots.find(loser);
+
+            assert(winnerIt != live_bots.end());
+            assert(loserIt  != live_bots.end());
+
             old_cell->botbot_terminated();
             new_cell->botbot_terminated();
             new_cell->initialize_bot(winner);
-            live_bots[winner] = new_cell;
+            winnerIt->second = new_cell;
 
             if (loser->nuts() == 0 && loser->bolts() == 0)
             {
-                live_bots.erase(loser);
+                if (loserIt == it) { ++it; }
+                live_bots.erase(loserIt);
                 dead_bots.push_back(pair<botbot*,int>(loser, cycles_passed));
             }
             else {
                 old_cell->initialize_bot(loser);
                 loser->set_current_cell(old_cell->get_row(),
                                         old_cell->get_col());
-                live_bots[loser] = old_cell;
+                loserIt->second = old_cell;
             }
         }
     }
@@ -440,4 +452,13 @@ string Grid::population_to_string() {
   string ret = buffer.str();
   cout.rdbuf(def);
   return ret;
+}
+
+string Grid::stats_to_string()
+{
+    stringstream ss;
+    ss << "Grid Cycle: " << cycles_passed << endl;
+    ss << "Living Bots: " << live_bots.size() << endl;
+    ss << "Dead Bots: " << dead_bots.size() << endl;
+    return ss.str();
 }

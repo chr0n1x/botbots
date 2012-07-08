@@ -101,6 +101,8 @@ class Grid {
     string to_string();
 
     string population_to_string();
+
+    string stats_to_string();
 };
 
 }
