@@ -26,7 +26,7 @@ class Mutex
 
     int unlock();
 
-    pthread_mutex_t & getRawMutex();
+    pthread_mutex_t * getRawMutex();
     // TODO -- functions to handle mutex errors
 };
 

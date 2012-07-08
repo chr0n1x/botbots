@@ -7,14 +7,13 @@ namespace condition_vars {
 
   class ConditionVariable
   {
-    pthread_cond_t cv
+    pthread_cond_t cv;
       
     public:
         ConditionVariable();
-        ConditionVariable(ConditionVariable cond_var);
         ~ConditionVariable();
 
-        pthread_cond_t & getRawCV();
+        pthread_cond_t * getRawCV();
   };
 
   inline ConditionVariable::ConditionVariable() {
