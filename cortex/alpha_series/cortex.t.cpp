@@ -90,19 +90,91 @@ void fill(Cortex &c, object *b, object *f) {
 /**
  *   main()
  */
-int main(int argc, char ** argv) {
+#include <string>
+#include <map>
+#include <set>
 
-  int runs = 0, threads = 2;
+bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
   if(argc > 1) {
-    runs = atoi(argv[1]);
-    if(argc == 3)
-      threads = atoi(argv[2]);
+    set<string> unknown_options;
+
+    int dummy = 0;
+    bool runs_assigned = false;
+
+    for(int i=1; i<argc; ++i) {
+      dummy = atoi(argv[i]);
+
+      if(dummy == 0) {
+        string option(argv[i]);
+        int dash_pos = option.find("-", 0);
+        while(dash_pos != string::npos) {
+            option.erase(dash_pos, 1);
+            dash_pos = option.find("-", 0);
+        }
+
+        if( opts.find(option) != opts.end() ) {
+          opts[option] = true;
+        }
+        else {
+          unknown_options.insert(option);
+        }
+      }
+      else {
+        if(runs_assigned) {
+          opts["threads"] = atoi(argv[i]);
+        }
+        else {
+          opts["runs"] = atoi(argv[i]);
+          runs_assigned = true;
+        }
+      }
+    }
+
+    if(unknown_options.empty()) {
+      cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
+      cout << "with " << opts["threads"] << " threads;" << endl;
+      cout << "Option(s):" << endl;
+      map<string, int>::iterator map_it = opts.begin();
+      for(map_it; map_it != opts.end(); ++map_it) {
+        if(map_it->second && map_it->first.compare("runs") != 0 && map_it->first.compare("threads") != 0)
+          cout << "\t" << map_it->first << endl;
+      }
+    }
+    else {
+      cout << "Unknown Option(s):" << endl;
+      set<string>::iterator set_it = unknown_options.begin();
+      for(set_it; set_it != unknown_options.end(); ++set_it)
+        cout << "\t" << *set_it << endl;
+      cout << "Aborting..." << endl;
+      return false;
+    }
   }
   else {
-    runs = 1;
+    cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
+    cout << "with " << opts["threads"] << " threads;" << endl;
   }
 
+  cout << endl;
+
+  return true;
+}
+
+int main(int argc, char ** argv) {
+
+  map<string, int> opts;
+  typedef pair<string, int> opts_t;
+  opts.insert( opts_t("threads_only", 0) );
+  opts.insert( opts_t("runs", 1) );
+  opts.insert( opts_t("threads", 2) );
+
+  if(!parseOptions(argc, argv, opts))
+    return 0;
+
   // c1 for iterative, c2 for threaded
+  int threads = opts["threads"];
+  int runs = opts["runs"];
+  bool with_iterative = (opts.find("threads_only") != opts.end() && opts.find("threads_only")->second == 0);
+
   Cortex c1(threads), c2(threads);
   // start the threads; workers should automatically block
   c2.start();
@@ -110,8 +182,6 @@ int main(int argc, char ** argv) {
   double iterative_sum = 0;
   double threaded_sum = 0;
 
-  cout << "Running " << runs << " passes for "
-      << 4*ELEMENTS << " elements..." << endl;
   for(int passes=0; passes<runs; ++passes) {
     // generate a new set of objects each iteration to prevent any compiler
     // optimizations
@@ -121,14 +191,18 @@ int main(int argc, char ** argv) {
     b.set_blah(rand());
     cout << "Pass\t" << passes+1 << endl;
 
+    double diff = 0;
+
+    if(with_iterative) {
     // ITERATIVE PASS
-    fill(c1, &b, &f);
-    time_t iterative_pass_start = time(NULL);
-    c1.process_gate_iteratively();
-    time_t iterative_pass_end = time(NULL);
-    double diff = difftime(iterative_pass_end, iterative_pass_start);
-    iterative_sum += diff;
-    cout << "\tIterative:\t" << (double)diff << " seconds" << endl;
+      fill(c1, &b, &f);
+      time_t iterative_pass_start = time(NULL);
+      c1.process_gate_iteratively();
+      time_t iterative_pass_end = time(NULL);
+      diff = difftime(iterative_pass_end, iterative_pass_start);
+      iterative_sum += diff;
+      cout << "\tIterative:\t" << (double)diff << " seconds" << endl;
+    }
 
     // THREADED PASS
     fill(c2, &b, &f);
@@ -145,10 +219,14 @@ int main(int argc, char ** argv) {
   cout << "--------------------------------------\n";
   cout << "Total Run Time:\t\t" << iterative_sum+threaded_sum
       << " seconds" << endl;
-  cout << "Iterative Total:\t" << iterative_sum
-      << " seconds" << endl;
-  cout << "Iterative Avg:\t\t" << iterative_sum / runs
-      << " seconds" << endl;
+
+  if(with_iterative) {
+    cout << "Iterative Total:\t" << iterative_sum
+        << " seconds" << endl;
+    cout << "Iterative Avg:\t\t" << iterative_sum / runs
+        << " seconds" << endl;
+  }
+
   cout << "Threaded Total:\t\t" << threaded_sum
       << " seconds" << endl;
   cout << "Threaded Avg:\t\t"  << threaded_sum / runs
