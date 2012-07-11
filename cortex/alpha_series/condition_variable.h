@@ -13,7 +13,7 @@ namespace condition_vars {
         ConditionVariable();
         ~ConditionVariable();
 
-        pthread_cond_t * getRawCV();
+        pthread_cond_t & getRawCV();
   };
 
   inline ConditionVariable::ConditionVariable() {

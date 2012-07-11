@@ -11,23 +11,23 @@ namespace synchronize {
 
   // TODO -- error handling
 
-  inline void waitOnCondition(ConditionVariable cv, Mutex mutex) {
-    pthread_cond_wait( cv.getRawCV(), mutex.getRawMutex() );
+  inline void waitOnCondition(ConditionVariable &cv, Mutex &mutex) {
+    pthread_cond_wait( &cv.getRawCV(), &mutex.getRawMutex() );
   }
 
-  inline void raiseSignal(ConditionVariable cv) {
-    pthread_cond_signal( cv.getRawCV() );
+  inline void raiseSignal(ConditionVariable &cv) {
+    pthread_cond_signal( &cv.getRawCV() );
   }
 
-  inline void signalAll( ConditionVariable cv ) {
-    pthread_cond_broadcast( cv.getRawCV() );
+  inline void signalAll( ConditionVariable &cv ) {
+    pthread_cond_broadcast( &cv.getRawCV() );
   }
 
-  inline void lockMutex(Mutex mutex) {
+  inline void lockMutex(Mutex &mutex) {
     mutex.lock();
   }
 
-  inline void unlockMutex(Mutex mutex) {
+  inline void unlockMutex(Mutex &mutex) {
     mutex.unlock();
   }
 
