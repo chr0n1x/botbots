@@ -1,14 +1,17 @@
-#include <iostream>
 #include "internals.h"
-#include "cortex.h"
 #include "boundjob.h"
-
-using namespace std;
+#include "cortex.h"
 using namespace the_cortex;
 
-#define ELEMENTS   250000 //125000
+#include <iostream>
+#include <string>
+#include <map>
+#include <set>
+using namespace std;
+
+#define ELEMENTS      250000 //125000
 #define POINTLESSNESS 100
-#define BENCHMARK true
+#define BENCHMARK     true
 
 namespace {
   void wasteTimeWithMath(double *mod, int num)
@@ -88,12 +91,14 @@ void fill(Cortex &c, object *b, object *f) {
 }
 
 /**
- *   main()
+ *   parseOptions()
+ *
+ *   Takes argc, argv and an option map from main()
+ *   Goes through the options passed in. The first numerical value given will be the number of runs
+ *   Any numerical value after that will be the number of threads for the cortexes.
+ *
+ *   returns false if there are unrecognized options in argv
  */
-#include <string>
-#include <map>
-#include <set>
-
 bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
   if(argc > 1) {
     set<string> unknown_options;
@@ -159,6 +164,9 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
   return true;
 }
 
+/**
+ *   main()
+ */
 int main(int argc, char ** argv) {
 
   map<string, int> opts;
@@ -191,28 +199,28 @@ int main(int argc, char ** argv) {
     b.set_blah(rand());
     cout << "Pass\t" << passes+1 << endl;
 
-    double diff = 0;
+    float diff = 0;
 
     if(with_iterative) {
     // ITERATIVE PASS
       fill(c1, &b, &f);
-      time_t iterative_pass_start = time(NULL);
+      float iterative_pass_start = clock();
       c1.process_gate_iteratively();
-      time_t iterative_pass_end = time(NULL);
-      diff = difftime(iterative_pass_end, iterative_pass_start);
+      float iterative_pass_end = clock();
+      diff = (iterative_pass_end - iterative_pass_start) / CLOCKS_PER_SEC;
       iterative_sum += diff;
-      cout << "\tIterative:\t" << (double)diff << " seconds" << endl;
+      cout << "\tIterative:\t" << (float)diff << " seconds" << endl;
     }
 
     // THREADED PASS
     fill(c2, &b, &f);
-    time_t threaded_pass_start = time(NULL);
+    float threaded_pass_start = clock();
     //fill(c2, &b, &f);
     c2.drain();
-    time_t threaded_pass_end = time(NULL);
-    diff = difftime(threaded_pass_end, threaded_pass_start);
+    float threaded_pass_end = clock();
+    diff = (threaded_pass_end - threaded_pass_start) / CLOCKS_PER_SEC;
     threaded_sum += diff;
-    cout << "\tThreaded:\t" << (double)diff << " seconds" << endl;
+    cout << "\tThreaded:\t" << (float)diff << " seconds" << endl;
   }
   c2.stop();
 
