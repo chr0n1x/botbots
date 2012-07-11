@@ -63,8 +63,8 @@ bool Cortex::process_next_function()
   d_mutex.lock();
   while(d_processing) {
     if (d_gate.empty()) {
+      synchronize::signalAll(d_cv_queue_empty);
       synchronize::waitOnCondition(d_cv_has_work, d_mutex);
-      //return false;
     }
     else {
       break;
@@ -150,14 +150,15 @@ void Cortex::drain()
   bool stillProcessing = true;
   while (stillProcessing)
   {
-    // TODO - remove tight polling...this is shitty
-    // IMPLEMENT THREAD CONDITION VAR HERE
     d_mutex.lock();
     stillProcessing = !d_gate.empty();
     d_mutex.unlock();
+
     if (stillProcessing) {
+      d_mutex.lock();
       synchronize::signalAll(d_cv_has_work);
-      sched_yield();
+      synchronize::waitOnCondition( d_cv_queue_empty, d_mutex );
+      d_mutex.unlock();
     }
   }
 }
