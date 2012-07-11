@@ -1,6 +1,3 @@
-#include <iostream>
-using namespace std;
-
 #include "cortex.h"
 
 namespace the_cortex {
@@ -15,15 +12,9 @@ namespace {
   */
   void* cortex_worker_thread(void* arg)
   {
-    cout << "cortex_thread()" << endl;
       Cortex* core = (Cortex*) arg;
       while(core->isStarted())
       {
-        /*
-        if (!core->process_next_function()) {
-            sched_yield();
-        }
-        */
         core->process_next_function();
       }
       return NULL;
@@ -33,7 +24,7 @@ namespace {
 Cortex::Cortex(int numThreads)
 : d_processing(false)
 {
-    if (numThreads < MAX_THREADS) {
+    if (numThreads > MAX_THREADS) {
         numThreads = MAX_THREADS;
     }
     d_workers.resize(numThreads);
@@ -70,22 +61,23 @@ bool Cortex::process_next_function()
   functional::Task *ret = NULL;
 
   d_mutex.lock();
-    //while(true) {
+    while(d_processing) {
       if (d_gate.empty()) {
         synchronize::waitOnCondition(d_cv_has_work, d_mutex);
         //return false;
       }
-      /*
       else {
         break;
       }
     }
-    */
-    ret = d_gate.front();
-    d_gate.pop();
+    if(d_processing) {
+      ret = d_gate.front();
+      d_gate.pop();
+    }
   d_mutex.unlock();
 
-  ret->execute();
+  if(d_processing)
+    ret->execute();
   return true;
 }
 
@@ -124,7 +116,6 @@ void Cortex::start()
     }
   }
 
-  cout << "started()" << endl;
   return;
 }
 
@@ -143,6 +134,7 @@ void Cortex::stop()
 
     if (d_processing) {
       d_processing = false;
+      synchronize::signalAll(d_cv_has_work);
 
       for(int i=0; i < d_workers.size(); ++i)
       {
@@ -162,9 +154,8 @@ void Cortex::stop()
 void Cortex::drain()
 {
     bool stillProcessing = true;
-    while (true)
+    while (stillProcessing)
     {
-      cout << "drain()" << endl;
         //TODO - remove tight polling...this is shitty
         // IMPLEMENT THREAD CONDITION VAR HERE
         d_mutex.lock();
@@ -173,9 +164,6 @@ void Cortex::drain()
         if (stillProcessing) {
             synchronize::signalAll(d_cv_has_work);
             sched_yield();
-        }
-        else {
-            break;
         }
     }
 }

@@ -6,7 +6,7 @@
 using namespace std;
 using namespace the_cortex;
 
-#define ELEMENTS   125000
+#define ELEMENTS   250000 //125000
 #define POINTLESSNESS 100
 #define BENCHMARK true
 
@@ -92,16 +92,18 @@ void fill(Cortex &c, object *b, object *f) {
  */
 int main(int argc, char ** argv) {
 
-  int runs = 0;
-  if(argc == 2) {
+  int runs = 0, threads = 2;
+  if(argc > 1) {
     runs = atoi(argv[1]);
+    if(argc == 3)
+      threads = atoi(argv[2]);
   }
   else {
     runs = 1;
   }
 
   // c1 for iterative, c2 for threaded
-  Cortex c1, c2;
+  Cortex c1(threads), c2(threads);
   // start the threads; workers should automatically block
   c2.start();
 
@@ -131,6 +133,7 @@ int main(int argc, char ** argv) {
     // THREADED PASS
     fill(c2, &b, &f);
     time_t threaded_pass_start = time(NULL);
+    //fill(c2, &b, &f);
     c2.drain();
     time_t threaded_pass_end = time(NULL);
     diff = difftime(threaded_pass_end, threaded_pass_start);

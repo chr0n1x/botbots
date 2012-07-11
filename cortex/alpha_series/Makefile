@@ -18,7 +18,7 @@ botbots: botbot.cpp grid.cpp main.cpp
 
 # WAT
 ct: cortex.o task.o boundjob.o condition_variable.o mutex.o
-	g++ -g -lpthread mutex.o condition_variable.o cortex.o task.o boundjob.o cortex.t.cpp -o cortex_test;
+	g++ -g -pthread mutex.o condition_variable.o cortex.o task.o boundjob.o cortex.t.cpp -o cortex_test -lm;
 
 mutex.o: mutex.cpp mutex.h
 	g++ -g -c mutex.cpp
