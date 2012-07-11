@@ -9,7 +9,7 @@ using namespace the_cortex;
 #include <set>
 using namespace std;
 
-#define ELEMENTS      250000 //125000
+#define ELEMENTS      500000 //250000 //125000
 #define POINTLESSNESS 100
 #define BENCHMARK     true
 
@@ -202,9 +202,10 @@ int main(int argc, char ** argv) {
     float diff = 0;
 
     if(with_iterative) {
-    // ITERATIVE PASS
-      fill(c1, &b, &f);
+      // ITERATIVE PASS
+      //fill(c1, &b, &f);
       float iterative_pass_start = clock();
+      fill(c1, &b, &f);
       c1.process_gate_iteratively();
       float iterative_pass_end = clock();
       diff = (iterative_pass_end - iterative_pass_start) / CLOCKS_PER_SEC;
@@ -213,9 +214,9 @@ int main(int argc, char ** argv) {
     }
 
     // THREADED PASS
-    fill(c2, &b, &f);
-    float threaded_pass_start = clock();
     //fill(c2, &b, &f);
+    float threaded_pass_start = clock();
+    fill(c2, &b, &f);
     c2.drain();
     float threaded_pass_end = clock();
     diff = (threaded_pass_end - threaded_pass_start) / CLOCKS_PER_SEC;
