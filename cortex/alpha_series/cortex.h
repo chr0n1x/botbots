@@ -26,10 +26,11 @@ class Cortex
 
     // PRIVATE DATA
 
-    mutex::Mutex                    d_mutex;
-    std::queue<functional::Task*>   d_gate;
-    std::vector<pthread_t>          d_workers;
-    bool                            d_processing;
+    condition_vars::ConditionVariable d_cv;
+    mutex::Mutex                      d_mutex;
+    std::queue<functional::Task*>     d_gate;
+    std::vector<pthread_t>            d_workers;
+    bool                              d_processing;
 
   public:
 

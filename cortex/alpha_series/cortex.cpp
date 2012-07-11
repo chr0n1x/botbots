@@ -3,24 +3,27 @@
 namespace the_cortex {
 
 namespace {
-    /**
-    *  cortex_worker_thread()
-    *  (void*) arg The cortex to be read from
-    *
-    *  Thread function that the workers use to access the cortex that they
-    *  belong to and process the next cortex_object
-    */
-    void* cortex_worker_thread(void* arg)
-    {
-        Cortex* core = (Cortex*) arg;
-        while(core->isStarted())
-        {
-            if (!core->process_next_function()) {
-                sched_yield();
-            }
+ /**
+  *  cortex_worker_thread()
+  *  (void*) arg The cortex to be read from
+  *
+  *  Thread function that the workers use to access the cortex that they
+  *  belong to and process the next cortex_object
+  */
+  void* cortex_worker_thread(void* arg)
+  {
+      Cortex* core = (Cortex*) arg;
+      while(core->isStarted())
+      {
+        /*
+        if (!core->process_next_function()) {
+            sched_yield();
         }
-        return NULL;
-    }
+        */
+        core->process_next_function();
+      }
+      return NULL;
+  }
 }
 
 Cortex::Cortex(int numThreads)
@@ -55,21 +58,24 @@ void Cortex::enqueue_task(functional::Task *task)
 }
 
 /**
-*  process_next_function()
-*/
+ *  process_next_function()
+ */
 bool Cortex::process_next_function()
 {
-    functional::Task *ret = NULL;
+  functional::Task *ret = NULL;
+
     {
-        mutex::MutexGuard guard(&d_mutex);
-        if (d_gate.empty()) {
-            return false;
-        }
-        ret = d_gate.front();
-        d_gate.pop();
+      mutex::MutexGuard guard(&d_mutex);
+      if (d_gate.empty()) {
+        synchronize::waitOnCondition(d_cv, d_mutex);
+        return false;
+      }
+      ret = d_gate.front();
+      d_gate.pop();
     }
-    ret->execute();
-    return true;
+
+  ret->execute();
+  return true;
 }
 
 /**

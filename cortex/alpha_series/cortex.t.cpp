@@ -100,7 +100,10 @@ int main(int argc, char ** argv) {
     runs = 1;
   }
 
+  // c1 for iterative, c2 for threaded
   Cortex c1, c2;
+  // start the threads; workers should automatically block
+  c2.start();
 
   double iterative_sum = 0;
   double threaded_sum = 0;
@@ -128,14 +131,13 @@ int main(int argc, char ** argv) {
     // THREADED PASS
     fill(c2, &b, &f);
     time_t threaded_pass_start = time(NULL);
-    c2.start();
     c2.drain();
     time_t threaded_pass_end = time(NULL);
     diff = difftime(threaded_pass_end, threaded_pass_start);
     threaded_sum += diff;
     cout << "\tThreaded:\t" << (double)diff << " seconds" << endl;
-    c2.stop();
   }
+  c2.stop();
 
   cout << "--------------------------------------\n";
   cout << "Total Run Time:\t\t" << iterative_sum+threaded_sum
