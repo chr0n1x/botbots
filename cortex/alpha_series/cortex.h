@@ -26,7 +26,7 @@ class Cortex
 
     // PRIVATE DATA
 
-    condition_vars::ConditionVariable d_cv;
+    condition_vars::ConditionVariable d_cv_has_work;
     mutex::Mutex                      d_mutex;
     std::queue<functional::Task*>     d_gate;
     std::vector<pthread_t>            d_workers;

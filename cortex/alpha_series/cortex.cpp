@@ -1,3 +1,6 @@
+#include <iostream>
+using namespace std;
+
 #include "cortex.h"
 
 namespace the_cortex {
@@ -12,6 +15,7 @@ namespace {
   */
   void* cortex_worker_thread(void* arg)
   {
+    cout << "cortex_thread()" << endl;
       Cortex* core = (Cortex*) arg;
       while(core->isStarted())
       {
@@ -54,6 +58,7 @@ void Cortex::enqueue_task(functional::Task *task)
 {
     d_mutex.lock();
     d_gate.push(task);
+    synchronize::signalAll(d_cv_has_work);
     d_mutex.unlock();
 }
 
@@ -64,15 +69,21 @@ bool Cortex::process_next_function()
 {
   functional::Task *ret = NULL;
 
-    {
-      mutex::MutexGuard guard(&d_mutex);
+  d_mutex.lock();
+    //while(true) {
       if (d_gate.empty()) {
-        synchronize::waitOnCondition(d_cv, d_mutex);
-        return false;
+        synchronize::waitOnCondition(d_cv_has_work, d_mutex);
+        //return false;
       }
-      ret = d_gate.front();
-      d_gate.pop();
+      /*
+      else {
+        break;
+      }
     }
+    */
+    ret = d_gate.front();
+    d_gate.pop();
+  d_mutex.unlock();
 
   ret->execute();
   return true;
@@ -86,13 +97,15 @@ bool Cortex::process_next_function()
 */
 void Cortex::process_gate_iteratively()
 {
-    d_mutex.lock();
-    while(!d_gate.empty())
-    {
-        d_gate.front()->execute();
-        d_gate.pop();
-    }
-    d_mutex.unlock();
+  stop();
+
+  d_mutex.lock();
+  while(!d_gate.empty())
+  {
+      d_gate.front()->execute();
+      d_gate.pop();
+  }
+  d_mutex.unlock();
 }
 
 /**
@@ -102,16 +115,17 @@ void Cortex::process_gate_iteratively()
 */
 void Cortex::start()
 {
-    if (d_processing) {
-        return;
-    }
-
+  if(!d_processing) {
     d_processing = true;
 
     for(int i = 0; i < d_workers.size(); ++i)
     {
         pthread_create(&d_workers[i], NULL, cortex_worker_thread, (void*)this);
     }
+  }
+
+  cout << "started()" << endl;
+  return;
 }
 
 /**
@@ -150,12 +164,14 @@ void Cortex::drain()
     bool stillProcessing = true;
     while (true)
     {
+      cout << "drain()" << endl;
         //TODO - remove tight polling...this is shitty
         // IMPLEMENT THREAD CONDITION VAR HERE
         d_mutex.lock();
         stillProcessing = !d_gate.empty();
         d_mutex.unlock();
         if (stillProcessing) {
+            synchronize::signalAll(d_cv_has_work);
             sched_yield();
         }
         else {
