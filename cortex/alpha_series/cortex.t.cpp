@@ -108,6 +108,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
 
     int dummy = 0;
     bool runs_assigned = false;
+    bool flags_found = false;
 
     for(int i=1; i<argc; ++i) {
       dummy = atoi(argv[i]);
@@ -122,6 +123,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
 
         if( opts.find(option) != opts.end() ) {
           opts[option] = true;
+          flags_found = true;
         }
         else {
           unknown_options.insert(option);
@@ -141,12 +143,16 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
     if(unknown_options.empty()) {
       cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
       cout << "with " << opts["threads"] << " threads;" << endl;
-      cout << "Option(s):" << endl;
-      map<string, int>::iterator map_it = opts.begin();
-      for(map_it; map_it != opts.end(); ++map_it) {
-        if(map_it->second && map_it->first.compare("runs") != 0 && map_it->first.compare("threads") != 0)
-          cout << "\t" << map_it->first << endl;
+
+      if(flags_found) {
+        cout << "Option(s):" << endl;
+        map<string, int>::iterator map_it = opts.begin();
+        for(map_it; map_it != opts.end(); ++map_it) {
+          if(map_it->second && map_it->first.compare("runs") != 0 && map_it->first.compare("threads") != 0)
+            cout << "\t" << map_it->first << endl;
+        }
       }
+
     }
     else {
       cout << "Unknown Option(s):" << endl;
