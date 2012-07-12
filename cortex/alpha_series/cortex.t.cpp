@@ -9,6 +9,9 @@ using namespace the_cortex;
 #include <set>
 using namespace std;
 
+#include <time.h>
+#include <sys/time.h>
+
 #define ELEMENTS      500000 //250000 //125000
 #define POINTLESSNESS 100
 #define BENCHMARK     true
@@ -169,6 +172,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
  */
 int main(int argc, char ** argv) {
 
+  // setting up flags and options
   map<string, int> opts;
   typedef pair<string, int> opts_t;
   opts.insert( opts_t("threads_only", 0) );
@@ -177,18 +181,19 @@ int main(int argc, char ** argv) {
 
   if(!parseOptions(argc, argv, opts))
     return 0;
-
-  // c1 for iterative, c2 for threaded
   int threads = opts["threads"];
   int runs = opts["runs"];
   bool with_iterative = (opts.find("threads_only") != opts.end() && opts.find("threads_only")->second == 0);
 
+  // c1 for iterative, c2 for threaded
   Cortex c1(threads), c2(threads);
   // start the threads; workers should automatically block
   c2.start();
 
+  struct timeval startLinear, finishLinear;
   double iterative_sum = 0;
   double threaded_sum = 0;
+  double totalLinearTime;
 
   for(int passes=0; passes<runs; ++passes) {
     // generate a new set of objects each iteration to prevent any compiler
@@ -199,29 +204,31 @@ int main(int argc, char ** argv) {
     b.set_blah(rand());
     cout << "Pass\t" << passes+1 << endl;
 
-    float diff = 0;
-
     if(with_iterative) {
       // ITERATIVE PASS
-      //fill(c1, &b, &f);
-      float iterative_pass_start = clock();
+      gettimeofday(&startLinear, NULL);
       fill(c1, &b, &f);
       c1.process_gate_iteratively();
-      float iterative_pass_end = clock();
-      diff = (iterative_pass_end - iterative_pass_start) / CLOCKS_PER_SEC;
-      iterative_sum += diff;
-      cout << "\tIterative:\t" << (float)diff << " seconds" << endl;
+      gettimeofday(&finishLinear, NULL);
+      totalLinearTime = 
+        (double)((double)(finishLinear.tv_sec - startLinear.tv_sec) * 1000000 + 
+        (double)(finishLinear.tv_usec - startLinear.tv_usec)) / 
+        (double)1000000;
+      iterative_sum += totalLinearTime;
+      cout << "\tIterative:\t" << (double)totalLinearTime << " seconds" << endl;
     }
 
     // THREADED PASS
-    //fill(c2, &b, &f);
-    float threaded_pass_start = clock();
+    gettimeofday(&startLinear, NULL);
     fill(c2, &b, &f);
     c2.drain();
-    float threaded_pass_end = clock();
-    diff = (threaded_pass_end - threaded_pass_start) / CLOCKS_PER_SEC;
-    threaded_sum += diff;
-    cout << "\tThreaded:\t" << (float)diff << " seconds" << endl;
+    gettimeofday(&finishLinear, NULL);
+    totalLinearTime = 
+      (double)((double)(finishLinear.tv_sec - startLinear.tv_sec) * 1000000 + 
+      (double)(finishLinear.tv_usec - startLinear.tv_usec)) / 
+      (double)1000000;
+    threaded_sum += totalLinearTime;
+    cout << "\tThreaded:\t" << (double)totalLinearTime << " seconds" << endl;
   }
   c2.stop();
 
