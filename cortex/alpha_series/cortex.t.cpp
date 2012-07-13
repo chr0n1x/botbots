@@ -153,9 +153,9 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
     if(unknown_options.empty()) {
 
       if(opts.find("help")->second) {
-        cout << "Usage:\t./<exec> [n_runs] [n_elements] [n_threads] [flags]" << endl;
+        cout << "Usage:\t" << argv[0] << " [n_runs] [n_elements] [n_threads] [flags]" << endl;
         cout << "Note:\tcmd line input is optional; order of numerical values matter; n_elements multiplied by 4"
-          << endl << endl;
+          << endl;
         return false;
       }
 
@@ -177,7 +177,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
       set<string>::iterator set_it = unknown_options.begin();
       for(set_it; set_it != unknown_options.end(); ++set_it)
         cout << "\t" << *set_it << endl;
-      cout << "Try: ./<exec> -help" << endl;
+      cout << "Try:\t" << argv[0] << " -help" << endl;
       return false;
     }
   }
@@ -185,8 +185,6 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
     cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
     cout << "with " << opts["threads"] << " threads;" << endl;
   }
-
-  cout << endl;
 
   return true;
 }
@@ -272,5 +270,13 @@ int main(int argc, char ** argv) {
       << " seconds" << endl;
   cout << "Threaded Avg:\t\t"  << threaded_sum / runs
       << " seconds" << endl;
+
+  // print speedup
+  if(with_iterative) {
+    double speedup = (iterative_sum / threaded_sum);
+    cout << "Speedup:\t\t" << speedup << "x" << endl;
+    cout << "Optimal:\t\t" << threads << "x" << endl;
+  }
+
   return 0;
 }
