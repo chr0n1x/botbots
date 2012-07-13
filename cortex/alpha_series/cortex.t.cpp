@@ -12,9 +12,11 @@ using namespace std;
 #include <time.h>
 #include <sys/time.h>
 
-#define ELEMENTS      500000 //250000 //125000
-#define POINTLESSNESS 100
+#define POINTLESSNESS 1000
 #define BENCHMARK     true
+
+//#define ELEMENTS      500000 //250000 //125000
+int ELEMENTS = 500000;
 
 namespace {
   void wasteTimeWithMath(double *mod, int num)
@@ -108,11 +110,13 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
 
     int dummy = 0;
     bool runs_assigned = false;
+    bool elements_assigned = false;
     bool flags_found = false;
 
     for(int i=1; i<argc; ++i) {
       dummy = atoi(argv[i]);
 
+      // has a dash so...non numeric
       if(dummy == 0) {
         string option(argv[i]);
         int dash_pos = option.find("-", 0);
@@ -122,25 +126,39 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
         }
 
         if( opts.find(option) != opts.end() ) {
-          opts[option] = true;
+          opts[option] = 1;
           flags_found = true;
         }
         else {
           unknown_options.insert(option);
         }
       }
+      // numeric...?
       else {
-        if(runs_assigned) {
-          opts["threads"] = atoi(argv[i]);
-        }
-        else {
+        if(!runs_assigned) {
           opts["runs"] = atoi(argv[i]);
           runs_assigned = true;
+        }
+        else if(!elements_assigned) {
+          ELEMENTS = atoi(argv[i]);
+          elements_assigned = true;
+        }
+        else {
+          runs_assigned = true;
+          opts["threads"] = atoi(argv[i]);
         }
       }
     }
 
     if(unknown_options.empty()) {
+
+      if(opts.find("help")->second) {
+        cout << "Usage:\t./<exec> [n_runs] [n_elements] [n_threads] [flags]" << endl;
+        cout << "Note:\tcmd line input is optional; order of numerical values matter; n_elements multiplied by 4"
+          << endl << endl;
+        return false;
+      }
+
       cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
       cout << "with " << opts["threads"] << " threads;" << endl;
 
@@ -159,7 +177,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
       set<string>::iterator set_it = unknown_options.begin();
       for(set_it; set_it != unknown_options.end(); ++set_it)
         cout << "\t" << *set_it << endl;
-      cout << "Aborting..." << endl;
+      cout << "Try: ./<exec> -help" << endl;
       return false;
     }
   }
@@ -184,6 +202,7 @@ int main(int argc, char ** argv) {
   opts.insert( opts_t("threads_only", 0) );
   opts.insert( opts_t("runs", 1) );
   opts.insert( opts_t("threads", 2) );
+  opts.insert( opts_t("help", 0) );
 
   if(!parseOptions(argc, argv, opts))
     return 0;
