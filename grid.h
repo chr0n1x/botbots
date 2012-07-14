@@ -1,10 +1,12 @@
 #ifndef __THEGRID
 #define __THEGRID
 
-#include <vector>
+#include <iomanip>
+#include <iostream>
 #include <map>
+#include <sstream>
+#include <vector>
 
-#include "internals.h"
 #include "botbot.h"
 #include "event.h"
 

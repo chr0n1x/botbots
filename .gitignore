@@ -1,2 +1,7 @@
 # swap files
 .*.sw?
+
+#repo specific binaries
+botbots
+boundjob_test
+cortex_test
