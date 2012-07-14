@@ -1,9 +1,6 @@
 #ifndef __MUTEX
 #define __MUTEX
 
-#include <iostream>
-using namespace std;
-
 #include <pthread.h>
 
 namespace mutex {

@@ -1,26 +1,23 @@
 all:
-	make clean; make botbots; make ct; make jobtest;
+	make botbots; make ct; make jobtest;
 
-botbots: botbot.cpp grid.cpp main.cpp
-	g++ main.cpp botbot.cpp grid.cpp -g -lncurses -lpthread -o botbots;
+#botbots: botbot.cpp grid.cpp main.cpp
+#	g++ main.cpp botbot.cpp grid.cpp -g -lncurses -lpthread -o botbots;
 
-#botbots: botbot.o grid.o main.o
-#	g++ main.o botbot.o grid.o -g -lncurses -lpthread -o botbots;
+botbots: botbot.o grid.o main.cpp
+	g++ main.cpp botbot.o grid.o -g -lncurses -lpthread -o botbots;
 
-#grid.o: grid.h grid.cpp
-#	g++ grid.cpp -g -lpthread -c
+grid.o: grid.h grid.cpp
+	g++ grid.cpp -g -lpthread -c
 
-#botbot.o: botbot.h botbot.cpp
-#	g++ botbot.cpp -g -lpthread -c
+botbot.o: botbot.h botbot.cpp
+	g++ botbot.cpp -g -lpthread -c
 
-#main.o: main.cpp
-#	g++ main.cpp -g -lpthread -c
-
-# WAT
 ct: cortex.o task.o boundjob.o condition_variable.o mutex.o
-	g++ -g -pthread mutex.o condition_variable.o cortex.o task.o boundjob.o cortex.t.cpp -o cortex_test -lm;
+	g++ -g -pthread mutex.o condition_variable.o cortex.o task.o \
+        boundjob.o cortex.t.cpp -o cortex_test -lm;
 
-mutex.o: mutex.cpp mutex.h
+mutex.o: mutex.cpp mutex.h timer.o
 	g++ -g -c mutex.cpp
 
 condition_variable.o: condition_variable.cpp condition_variable.h
@@ -28,6 +25,9 @@ condition_variable.o: condition_variable.cpp condition_variable.h
 
 cortex.o: cortex.cpp cortex.h
 	g++ -g -c cortex.cpp
+
+timer.o: timer.cpp timer.h
+	g++ -g -c timer.cpp
 
 jobtest: boundjob.o task.o
 	g++ -g boundjob.o task.o boundjob.t.cpp -o boundjob_test

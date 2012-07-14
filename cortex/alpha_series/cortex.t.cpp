@@ -1,21 +1,21 @@
-#include "internals.h"
 #include "boundjob.h"
 #include "cortex.h"
+#include "timer.h"
+
 using namespace the_cortex;
 
 #include <iostream>
 #include <string>
 #include <map>
 #include <set>
-using namespace std;
 
-#include <time.h>
-#include <sys/time.h>
+#include <cstdlib>
+
+using namespace std;
 
 #define POINTLESSNESS 1000
 #define BENCHMARK     true
 
-//#define ELEMENTS      500000 //250000 //125000
 int ELEMENTS = 500000;
 
 namespace {
@@ -213,7 +213,6 @@ int main(int argc, char ** argv) {
   // start the threads; workers should automatically block
   c2.start();
 
-  struct timeval startLinear, finishLinear;
   double iterative_sum = 0;
   double threaded_sum = 0;
   double totalLinearTime;
@@ -229,27 +228,23 @@ int main(int argc, char ** argv) {
 
     if(with_iterative) {
       // ITERATIVE PASS
-      gettimeofday(&startLinear, NULL);
+      prof::Timer it_timer;
+      it_timer.start();
       fill(c1, &b, &f);
       c1.process_gate_iteratively();
-      gettimeofday(&finishLinear, NULL);
-      totalLinearTime = 
-        (double)((double)(finishLinear.tv_sec - startLinear.tv_sec) * 1000000 + 
-        (double)(finishLinear.tv_usec - startLinear.tv_usec)) / 
-        (double)1000000;
+      it_timer.stop();
+      totalLinearTime = it_timer.elapsed_time();
       iterative_sum += totalLinearTime;
-      cout << "\tIterative:\t" << (double)totalLinearTime << " seconds" << endl;
+      cout << "\tIterative:\t" << totalLinearTime << " seconds" << endl;
     }
 
     // THREADED PASS
-    gettimeofday(&startLinear, NULL);
+    prof::Timer thr_timer;
+    thr_timer.start();
     fill(c2, &b, &f);
     c2.drain();
-    gettimeofday(&finishLinear, NULL);
-    totalLinearTime = 
-      (double)((double)(finishLinear.tv_sec - startLinear.tv_sec) * 1000000 + 
-      (double)(finishLinear.tv_usec - startLinear.tv_usec)) / 
-      (double)1000000;
+    thr_timer.stop();
+    totalLinearTime = thr_timer.elapsed_time();
     threaded_sum += totalLinearTime;
     cout << "\tThreaded:\t" << (double)totalLinearTime << " seconds" << endl;
   }
