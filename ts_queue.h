@@ -3,7 +3,6 @@
 
 #include <deque>
 #include "mutex.h"
-#include "internals.h"
 
 /**
  *  TEMPLATE: ELEMTYPE
@@ -14,7 +13,7 @@
 template <typename ELEMTYPE>
 class ts_queue {
 
-  deque<ELEMTYPE> d_queue;
+  std::deque<ELEMTYPE>   d_queue;
   mutex::Mutex           d_lock;
 
   public:

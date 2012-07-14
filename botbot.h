@@ -1,11 +1,16 @@
 #ifndef __BOTFACTORY
 #define __BOTFACTORY
 
-#include "internals.h"
 #include "mutex.h"
 #include "event.h"
 
+#include <string>
 #include <vector>
+
+#include <ctime>    // time()
+#include <cstdio>   // sprintf()
+#include <cstdlib>  // rand()
+
 
 namespace bot_factory {
 

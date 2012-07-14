@@ -1,7 +1,9 @@
-#include <iostream>
-#include "internals.h"
 #include "cortex.h"
 #include "boundjob.h"
+
+#include <iostream>
+
+#include <cstdlib>
 
 using namespace std;
 using namespace the_cortex;
