@@ -4,6 +4,13 @@
 #include <time.h>
 #include <sys/time.h>
 
+/**
+ *  Timer Class
+ *
+ *  DO NOT USE THIS CLASS AND ITS FUNCTIONS IN QUICK SUCCESSION
+ *  (eg: Sean broke the Mutex class with this haha)
+ */
+
 namespace prof {
 
 class Timer
