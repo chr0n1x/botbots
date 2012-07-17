@@ -1,5 +1,5 @@
-#ifndef INCLUDED_MUTEX
-#define INCLUDED_MUTEX
+#ifndef __MUTEX
+#define __MUTEX
 
 #include <pthread.h>
 
@@ -25,6 +25,9 @@ class Mutex
     int lock();
 
     int unlock();
+
+    pthread_mutex_t & getRawMutex();
+    // TODO -- functions to handle mutex errors
 };
 
 class MutexGuard
@@ -59,7 +62,6 @@ MutexGuard::~MutexGuard()
                              //============
                              // class Mutex
                              //============
-
 inline
 Mutex::Mutex()
 {
@@ -91,4 +93,5 @@ int Mutex::unlock()
 }
 
 }  // close namespace mutex
+
 #endif
