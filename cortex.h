@@ -2,7 +2,7 @@
 #define __CORTEX
 
 #include "task.h"
-#include "mutex.h"
+#include "synchronize.h"
 
 #include <queue>
 #include <vector>
@@ -22,14 +22,16 @@ namespace the_cortex {
 class Cortex
 {
 
-    static const int MAX_THREADS = 8;
+  static const int MAX_THREADS = 8;
 
-    // PRIVATE DATA
+  // PRIVATE DATA
 
-    mutex::Mutex                    d_mutex;
-    std::queue<functional::Task*>   d_gate;
-    std::vector<pthread_t>          d_workers;
-    bool                            d_processing;
+  condition_vars::ConditionVariable d_cv_has_work;
+  condition_vars::ConditionVariable d_cv_queue_empty;
+  mutex::Mutex                      d_mutex;
+  std::queue<functional::Task*>     d_gate;
+  std::vector<pthread_t>            d_workers;
+  bool                              d_processing;
 
   public:
 
@@ -38,7 +40,8 @@ class Cortex
     ~Cortex();
 
     /**
-     *  queue_task()
+     *  enqueue_task()
+     *
      *  Task* pointer to the task to execute. Note that the cortex will own
      *  this pointer after being passed and should not be modified after
      *  passing.
@@ -48,17 +51,17 @@ class Cortex
     void enqueue_task(functional::Task *task);
 
     /**
-     *  process_next_gate_element()
+     *  process_next_function()
      */
     bool process_next_function();
 
     /**
-     *  process_gate_iteratively()
+     *  process_iteratively()
      *
      *  Goes through the entire queue, processing all tasks 1 by 1 in the
      *  calling thread
      */
-    void process_gate_iteratively();
+    void process_iteratively();
 
     /**
      *  start()
@@ -76,21 +79,21 @@ class Cortex
 
 
     /**
-     *  wait_for_empty_queue()
+     *  drain()
      *
      * Block until the queue is empty
      */
     void drain();
 
     /**
-     *  process_signal()
+     *  started()
      *
      *  Return true if the cortex is processing and false otherwise
      */
-    bool isStarted();
+    bool started();
 
    /**
-    *  objects_in_gate()
+    *  size()
     *
     *  Return the number of objects queued in the gate
     */

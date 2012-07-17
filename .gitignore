@@ -1,6 +1,9 @@
 # swap files
 .*.sw?
 
+#object files
+*.o
+
 #repo specific binaries
 botbots
 boundjob_test

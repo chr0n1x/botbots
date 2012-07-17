@@ -231,7 +231,7 @@ int main(int argc, char ** argv) {
       prof::Timer it_timer;
       it_timer.start();
       fill(c1, &b, &f);
-      c1.process_gate_iteratively();
+      c1.process_iteratively();
       it_timer.stop();
       totalLinearTime = it_timer.elapsed_time();
       iterative_sum += totalLinearTime;
