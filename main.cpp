@@ -60,43 +60,55 @@ int main(int argc, char ** argv)
 
     int  grid_rows = 0;
     int  grid_cols = 0;
+    bool rows_assigned = false;
+
     bool fish_tank = false;
     bool display_events = true;
     bool display_grid = true;
 
-    if(argc >= 3) {
-        grid_rows = atoi(argv[1]);
-        grid_cols = atoi(argv[2]);
-        if (argc >= 4) {
-            for (int i = 3; i < argc; ++i)
-            {
-                string option(argv[i]);
+    int dummy = 0;
+    if(argc >= 2) {
+      for (int i = 1; i < argc; ++i)
+      {
+        dummy = atoi(argv[i]);
 
-                int dash_pos = option.find("-", 0);
-                while(dash_pos != string::npos) {
-                    option.erase(dash_pos, 1);
-                    dash_pos = option.find("-", 0);
-                }
+        if(dummy == 0) {
+          string option(argv[i]);
 
-                if (option == "fishtank" || option == "f") {
-                    fish_tank = true;
-                }
-                else if (option == "nosleep" || option == "ff") {
-                    sleep_period = 0;
-                }
-                else if (option == "noevent" || option == "ne") {
-                    display_events = false;
-                }
-                else if (option == "nogrid" || option == "ng") {
-                    display_grid = false;
-                }
-                else {
-                    cout << "Unrecognized option: " << option
-                         << " ...stopping" << endl;
-                    return 0;
-                }
-            }
+          int dash_pos = option.find("-", 0);
+          while(dash_pos != string::npos) {
+              option.erase(dash_pos, 1);
+              dash_pos = option.find("-", 0);
+          }
+
+          if (option == "fishtank" || option == "f") {
+              fish_tank = true;
+          }
+          else if (option == "nosleep" || option == "ff") {
+              sleep_period = 0;
+          }
+          else if (option == "noevent" || option == "ne") {
+              display_events = false;
+          }
+          else if (option == "nogrid" || option == "ng") {
+              display_grid = false;
+          }
+          else {
+              cout << "Unrecognized option: " << option
+                   << " ...stopping" << endl;
+              return 0;
+          }
         }
+        else {
+          if(rows_assigned) {
+            grid_cols = atoi(argv[i]);
+          }
+          else {
+            grid_rows = atoi(argv[i]);
+            rows_assigned = true;
+          }
+        }
+      }
     }
 
     the_grid::Grid g(grid_rows, grid_cols, fish_tank);

@@ -105,8 +105,10 @@ void Grid::initialize()
 {
     lg = new legacy_botbot();
     cycles_passed = 0;
+    total_time = 0;
+    last_cycle_time = 0;
 
-    MAX_BOTBOTS = rows*cols / 5;
+    MAX_BOTBOTS = rows*cols / POPULATION_DENSITY;
 
     vgrid.resize(rows);
 
@@ -313,8 +315,13 @@ bool Grid::fill_to_capacity() {
  */
 bool Grid::initiate_cycle() {
     if (live_bots.size() > 1) {
-        ++cycles_passed;
+        timer.start();
         move_bots();
+        timer.stop();
+
+        last_cycle_time = timer.elapsed_time();
+        total_time += last_cycle_time;
+        ++cycles_passed;
     }
 }
 
@@ -390,12 +397,17 @@ string Grid::to_string() {
       cout << endl << endl;
     }
     cout << endl << "----- " << live_bots.size()
-         << " BotBots Online (" << cycles_passed << " Cycles) -----";
+         << " BotBots Online -----";
     cout << endl << endl << population_to_string() << endl;
 
+    cout << endl 
+         << "Cycles: " << cycles_passed
+         << "\tAvg Cycle Length: " << total_time / cycles_passed
+         << "\tLast Cycle Length: " << last_cycle_time << "\t\t\t";
     if(!battle_bots) {
-      cout << endl << "FISH TANK MODE" << endl;
+      cout << "FISH TANK MODE";
     }
+    cout << endl;
 
     string ret = buffer.str();
     cout.rdbuf(def);

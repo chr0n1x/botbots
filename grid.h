@@ -7,15 +7,18 @@
 #include <sstream>
 #include <vector>
 
+#include "cortex.h"
 #include "botbot.h"
 #include "event.h"
+#include "timer.h"
 
 using namespace bot_factory;
 
 namespace the_grid {
 
-static const int  DEFAULT_GRID_DIM = 5;
-static const bool FULL_THREAD = false;
+static const int  DEFAULT_GRID_DIM    = 5;
+static const int  POPULATION_DENSITY  = 5;
+static const bool FULL_THREAD         = false;
 
 /**
  *  CLASS: GridCell
@@ -30,7 +33,6 @@ class GridCell {
   int          id;
   int          row, col;
   botbot*      bot;
-  mutex::Mutex occupy_lock;
 
   public:
 
@@ -68,6 +70,9 @@ class Grid {
   int                           rows, cols;
   size_t                        cycles_passed;
   vector<events::Event *>      *events;
+
+  prof::Timer                   timer;
+  double                        total_time, last_cycle_time;
 
   // PRIVATE MANIPULATORS
   void initialize();
