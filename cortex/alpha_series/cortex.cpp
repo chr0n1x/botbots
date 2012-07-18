@@ -10,39 +10,40 @@ namespace {
   *  Thread function that the workers use to access the cortex that they
   *  belong to and process the next cortex_object
   */
-  void* cortex_worker_thread(void* arg)
-  {
+void* cortex_worker_thread(void* arg)
+{
     Cortex* core = (Cortex*) arg;
     while(core->isStarted())
     {
-      core->process_next_function();
+        core->process_next_function();
     }
     return NULL;
-  }
 }
+
+} // close unnamed namespace
 
 Cortex::Cortex(int numThreads)
 : d_processing(false)
 {
-  if (numThreads > MAX_THREADS) {
-    numThreads = MAX_THREADS;
-  }
-  d_workers.resize(numThreads);
+    if (numThreads > MAX_THREADS) {
+        numThreads = MAX_THREADS;
+    }
+    d_workers.resize(numThreads);
 }
 
 Cortex::~Cortex()
 {
-  // delete any remaining tasks
-  stop();
+    // delete any remaining tasks
+    stop();
 
-  d_mutex.lock();
-  while (!d_gate.empty())
-  {
-    functional::Task *job = d_gate.front();
-    d_gate.pop();
-    delete job;
-  }
-  d_mutex.unlock();
+    d_mutex.lock();
+    while (!d_gate.empty())
+    {
+        functional::Task *job = d_gate.front();
+        d_gate.pop();
+        delete job;
+    }
+    d_mutex.unlock();
 }
 
 void Cortex::enqueue_task(functional::Task *task)
@@ -58,27 +59,30 @@ void Cortex::enqueue_task(functional::Task *task)
  */
 bool Cortex::process_next_function()
 {
-  functional::Task *ret = NULL;
+    functional::Task *ret = NULL;
 
-  d_mutex.lock();
-  while(d_processing) {
-    if (d_gate.empty()) {
-      synchronize::signalAll(d_cv_queue_empty);
-      synchronize::waitOnCondition(d_cv_has_work, d_mutex);
+    d_mutex.lock();
+    while(d_processing)
+    {
+        if (d_gate.empty()) {
+            synchronize::signalAll(d_cv_queue_empty);
+            synchronize::waitOnCondition(d_cv_has_work, d_mutex);
+        }
+        else {
+            break;
+        }
     }
-    else {
-      break;
+    if(d_processing) {
+        ret = d_gate.front();
+        d_gate.pop();
     }
-  }
-  if(d_processing) {
-    ret = d_gate.front();
-    d_gate.pop();
-  }
-  d_mutex.unlock();
+    d_mutex.unlock();
 
-  if(d_processing)
-    ret->execute();
-  return true;
+    if(d_processing) {
+        ret->execute();
+        delete ret;
+    }
+    return true;
 }
 
 /**
@@ -89,15 +93,17 @@ bool Cortex::process_next_function()
  */
 void Cortex::process_gate_iteratively()
 {
-  stop();
+    stop();
 
-  d_mutex.lock();
-  while(!d_gate.empty())
-  {
-      d_gate.front()->execute();
-      d_gate.pop();
-  }
-  d_mutex.unlock();
+    d_mutex.lock();
+    while(!d_gate.empty())
+    {
+        functional::Task *job = d_gate.front();
+        d_gate.pop();
+        job->execute();
+        delete job;
+    }
+    d_mutex.unlock();
 }
 
 /**
@@ -107,16 +113,17 @@ void Cortex::process_gate_iteratively()
  */
 void Cortex::start()
 {
-  if(!d_processing) {
-    d_processing = true;
+    if(!d_processing) {
+        d_processing = true;
 
-    for(int i = 0; i < d_workers.size(); ++i)
-    {
-      pthread_create(&d_workers[i], NULL, cortex_worker_thread, (void*)this);
+        for(int i = 0; i < d_workers.size(); ++i)
+        {
+            pthread_create(&d_workers[i], NULL,
+                           cortex_worker_thread, (void*)this);
+        }
     }
-  }
 
-  return;
+    return;
 }
 
 /**
@@ -126,17 +133,17 @@ void Cortex::start()
  */
 void Cortex::stop()
 {
-  if (d_processing) {
-    d_processing = false;
-    synchronize::signalAll(d_cv_has_work);
+    if (d_processing) {
+        d_processing = false;
+        synchronize::signalAll(d_cv_has_work);
 
-    for(int i=0; i < d_workers.size(); ++i)
-    {
-      pthread_join(d_workers[i], NULL);
+        for(int i=0; i < d_workers.size(); ++i)
+        {
+            pthread_join(d_workers[i], NULL);
+        }
     }
-  }
 
-  return;
+    return;
 }
 
 
@@ -147,20 +154,20 @@ void Cortex::stop()
  */
 void Cortex::drain()
 {
-  bool stillProcessing = true;
-  while (stillProcessing)
-  {
-    d_mutex.lock();
-    stillProcessing = !d_gate.empty();
-    d_mutex.unlock();
+    bool stillProcessing = true;
+    while (stillProcessing)
+    {
+        d_mutex.lock();
+        stillProcessing = !d_gate.empty();
+        d_mutex.unlock();
 
-    if (stillProcessing) {
-      d_mutex.lock();
-      synchronize::signalAll(d_cv_has_work);
-      synchronize::waitOnCondition( d_cv_queue_empty, d_mutex );
-      d_mutex.unlock();
+        if (stillProcessing) {
+            d_mutex.lock();
+            synchronize::signalAll(d_cv_has_work);
+            synchronize::waitOnCondition( d_cv_queue_empty, d_mutex );
+            d_mutex.unlock();
+        }
     }
-  }
 }
 
 /**
@@ -170,7 +177,7 @@ void Cortex::drain()
  */
 bool Cortex::isStarted()
 {
-  return d_processing;
+    return d_processing;
 }
 
 /**
@@ -180,10 +187,8 @@ bool Cortex::isStarted()
 */
 size_t Cortex::size()
 {
-  size_t ret = 0;
-  d_mutex.lock();
-  ret = d_gate.size();
-  d_mutex.unlock();
+    mutex::MutexGuard guard(&d_mutex);
+    return d_gate.size();
 }
 
 }  // close the_cortex namespace
