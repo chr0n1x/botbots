@@ -79,7 +79,7 @@ bool Cortex::process_next_function()
       // if there are no more tasks when this thread accesses the queue
       // signal the parent thread that the queue is empty
       // then release d_mutex and wait for the has_work CV
-      synchronize::signalAll(d_cv_queue_empty);
+      synchronize::raiseSignal(d_cv_queue_empty);
       synchronize::waitOnCondition(d_cv_has_work, d_mutex);
     }
     else {
