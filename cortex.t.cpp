@@ -13,7 +13,7 @@ using namespace the_cortex;
 
 using namespace std;
 
-#define POINTLESSNESS 1000
+#define POINTLESSNESS 100
 #define BENCHMARK     true
 
 int ELEMENTS = 500000;
@@ -105,6 +105,7 @@ void fill(Cortex &c, object *b, object *f) {
  *   returns false if there are unrecognized options in argv
  */
 bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
+
   if(argc > 1) {
     set<string> unknown_options;
 
@@ -159,9 +160,6 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
         return false;
       }
 
-      cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
-      cout << "with " << opts["threads"] << " threads;" << endl;
-
       if(flags_found) {
         cout << "Option(s):" << endl;
         map<string, int>::iterator map_it = opts.begin();
@@ -181,10 +179,10 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
       return false;
     }
   }
-  else {
-    cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
-    cout << "with " << opts["threads"] << " threads;" << endl;
-  }
+
+  cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
+  cout << "with " << opts["threads"] << " threads;" << endl;
+  cout << "Pointlessness: " << POINTLESSNESS << endl;
 
   return true;
 }
