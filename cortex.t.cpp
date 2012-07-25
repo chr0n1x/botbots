@@ -15,8 +15,8 @@ using namespace std;
 
 #define BENCHMARK     true
 
-int ELEMENTS = 500000;
-int POINTLESSNESS = 1000;
+unsigned long long ELEMENTS = 500000;
+unsigned long long POINTLESSNESS = 1000;
 
 namespace {
   void wasteTimeWithMath(double *mod, int num)
