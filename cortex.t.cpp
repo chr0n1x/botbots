@@ -13,10 +13,10 @@ using namespace the_cortex;
 
 using namespace std;
 
-#define POINTLESSNESS 100
 #define BENCHMARK     true
 
 int ELEMENTS = 500000;
+int POINTLESSNESS = 1000;
 
 namespace {
   void wasteTimeWithMath(double *mod, int num)
@@ -112,6 +112,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
     int dummy = 0;
     bool runs_assigned = false;
     bool elements_assigned = false;
+    bool pointlessness_assigned = false;
     bool flags_found = false;
 
     for(int i=1; i<argc; ++i) {
@@ -144,8 +145,11 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
           ELEMENTS = atoi(argv[i]);
           elements_assigned = true;
         }
+        else if(!pointlessness_assigned) {
+          POINTLESSNESS = atoi(argv[i]);
+          pointlessness_assigned = true;
+        }
         else {
-          runs_assigned = true;
           opts["threads"] = atoi(argv[i]);
         }
       }
