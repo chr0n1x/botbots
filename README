@@ -23,6 +23,13 @@ This project is more for the sake of learning than it is for any practical appli
 
 Find any bugs? SEGFAULTs? Suggestions? Email me at heilong24@gmail.com
 
+-- UPDATE 7/27/2012 - ALPHA SERIES --
+
+Alpha series of the Cortex is ready to use! It does run faster than STL::queue and is our own implementation of POSIX threads.
+Compared to a standard implementation of POSIX threads, we have a 25% temporal overhead for class inits, mallocs, etc (looking into ways to reduce this in the Beta Series)
+Using this class though would eliminate the need for you to look into your own ways to block threads and pass tasks to a pool of workers. Just bind a function and arguments
+to an element and push it into the queue, the Cortex takes care of the rest (look at the cortex test - cortex.t.cpp - for an example).
+
 -- THANKS --
 
 genKeen - friend and teacher. Gonna make a man outta me by teaching me more C++
