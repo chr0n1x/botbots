@@ -1,5 +1,6 @@
 #include "boundjob.h"
 #include "cortex.h"
+#include "multiqueue_threadpool.h"
 #include "timer.h"
 
 using namespace the_cortex;
@@ -13,10 +14,10 @@ using namespace the_cortex;
 
 using namespace std;
 
-#define POINTLESSNESS 1000
+#define POINTLESSNESS 10000
 #define BENCHMARK     true
 
-int ELEMENTS = 500000;
+int ELEMENTS = 100000;
 
 namespace {
   void wasteTimeWithMath(double *mod, int num)
@@ -95,6 +96,67 @@ void fill(Cortex &c, object *b, object *f) {
   }
 }
 
+void fill(MultiQueueThreadpool &mqt, object *b, object *f) {
+  for(size_t i=0; i<ELEMENTS; ++i)
+  {
+    mqt.enqueue_task(functional::BindUtil::bind(&_threaded_a, f));
+    mqt.enqueue_task(functional::BindUtil::bind(&_threaded_b, f));
+    mqt.enqueue_task(functional::BindUtil::bind(&_threaded_a, b));
+    mqt.enqueue_task(functional::BindUtil::bind(&_threaded_b, b));
+  }
+}
+
+void process_in_thread(object *b, object *f)
+{
+  for(size_t i=0; i<ELEMENTS; ++i)
+  {
+    _threaded_a(f);
+    _threaded_b(f);
+    _threaded_a(b);
+    _threaded_b(b);
+  }
+}
+
+struct WorkerData {
+    int num_iter;
+    object *b;
+    object *f;
+};
+
+void *raw_worker(void *data)
+{
+    WorkerData *work = (WorkerData*)data;
+    for (int i = 0; i < work->num_iter; ++i)
+    {
+        _threaded_a(work->f);
+        _threaded_b(work->f);
+        _threaded_a(work->b);
+        _threaded_b(work->b);
+    }
+    return NULL;
+}
+
+void runRawThreadTest(int numThreads, object *b, object *f)
+{
+    std::vector<pthread_t>  workers(numThreads);
+    int iter_per_thread = ELEMENTS / numThreads;
+    WorkerData data = {iter_per_thread, b, f};
+    // this one thread may have to work a bit harder, not balanced...
+    WorkerData leftover = {(ELEMENTS - (iter_per_thread*numThreads-1)), b, f};
+    // So lets start him first
+    pthread_create(&workers[0], NULL, raw_worker, (void*)&leftover);
+    for(int i = 1; i < workers.size(); ++i)
+    {
+        pthread_create(&workers[i], NULL, raw_worker, (void*)&data);
+    }
+
+    for(int i=0; i < workers.size(); ++i)
+    {
+        pthread_join(workers[i], NULL);
+    }
+}
+
+
 /**
  *   parseOptions()
  *
@@ -153,20 +215,24 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
     if(unknown_options.empty()) {
 
       if(opts.find("help")->second) {
-        cout << "Usage:\t" << argv[0] << " [n_runs] [n_elements] [n_threads] [flags]" << endl;
-        cout << "Note:\tcmd line input is optional; order of numerical values matter; n_elements multiplied by 4"
-          << endl;
+        cout << "Usage:\t" << argv[0]
+             << " [n_runs] [n_elements] [n_threads] [flags]" << endl;
+        cout << "Note:\tcmd line input is optional; "
+                "order of numerical values matter; n_elements multiplied by 4"
+             << endl;
         return false;
       }
 
-      cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
+      cout << "Running " << opts["runs"]
+           << " passes for " << 4*ELEMENTS << " elements ";
       cout << "with " << opts["threads"] << " threads;" << endl;
 
       if(flags_found) {
         cout << "Option(s):" << endl;
         map<string, int>::iterator map_it = opts.begin();
         for(map_it; map_it != opts.end(); ++map_it) {
-          if(map_it->second && map_it->first.compare("runs") != 0 && map_it->first.compare("threads") != 0)
+          if(map_it->second && map_it->first != "runs"
+          && map_it->first != "threads")
             cout << "\t" << map_it->first << endl;
         }
       }
@@ -182,7 +248,8 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
     }
   }
   else {
-    cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
+    cout << "Running " << opts["runs"]
+         << " passes for " << 4*ELEMENTS << " elements ";
     cout << "with " << opts["threads"] << " threads;" << endl;
   }
 
@@ -208,13 +275,10 @@ int main(int argc, char ** argv) {
   int runs = opts["runs"];
   bool with_iterative = (opts.find("threads_only") != opts.end() && opts.find("threads_only")->second == 0);
 
-  // c1 for iterative, c2 for threaded
-  Cortex c1(threads), c2(threads);
-  // start the threads; workers should automatically block
-  c2.start();
-
   double iterative_sum = 0;
   double threaded_sum = 0;
+  double mqt_sum = 0;
+  double raw_threaded_sum = 0;
   double totalLinearTime;
 
   for(int passes=0; passes<runs; ++passes) {
@@ -230,8 +294,7 @@ int main(int argc, char ** argv) {
       // ITERATIVE PASS
       prof::Timer it_timer;
       it_timer.start();
-      fill(c1, &b, &f);
-      c1.process_gate_iteratively();
+      process_in_thread(&b, &f);
       it_timer.stop();
       totalLinearTime = it_timer.elapsed_time();
       iterative_sum += totalLinearTime;
@@ -241,36 +304,71 @@ int main(int argc, char ** argv) {
     // THREADED PASS
     prof::Timer thr_timer;
     thr_timer.start();
-    fill(c2, &b, &f);
-    c2.drain();
+    Cortex threadpool(threads);
+    threadpool.start();
+
+    fill(threadpool, &b, &f);
+    threadpool.drain();
+
+    threadpool.stop();
     thr_timer.stop();
     totalLinearTime = thr_timer.elapsed_time();
     threaded_sum += totalLinearTime;
     cout << "\tThreaded:\t" << (double)totalLinearTime << " seconds" << endl;
+
+    // multiqueue_threadpool pass
+    prof::Timer mqt_timer;
+    mqt_timer.start();
+    MultiQueueThreadpool mqt_tp(threads);
+    mqt_tp.start();
+
+    fill(mqt_tp, &b, &f);
+    mqt_tp.drain();
+
+    mqt_tp.stop();
+    mqt_timer.stop();
+    totalLinearTime = mqt_timer.elapsed_time();
+    mqt_sum += totalLinearTime;
+    cout << "\tMQT Threaded:\t" << (double)totalLinearTime
+                                << " seconds" << endl;
+
+    // Raw threads
+    prof::Timer raw_timer;
+    raw_timer.start();
+    runRawThreadTest(threads, &b, &f);
+    raw_timer.stop();
+    totalLinearTime = raw_timer.elapsed_time();
+    raw_threaded_sum += totalLinearTime;
+    cout << "\tRaw Threaded:\t" << (double)totalLinearTime
+         << " seconds" << endl;
   }
-  c2.stop();
 
   cout << "--------------------------------------\n";
-  cout << "Total Run Time:\t\t" << iterative_sum+threaded_sum
+  cout << "Total Run Time:\t\t\t" << iterative_sum+threaded_sum
       << " seconds" << endl;
 
   if(with_iterative) {
-    cout << "Iterative Total:\t" << iterative_sum
-        << " seconds" << endl;
-    cout << "Iterative Avg:\t\t" << iterative_sum / runs
-        << " seconds" << endl;
+    cout << "Iterative Total/Avg:\t" << iterative_sum << " / "
+         << iterative_sum / runs << " seconds" << endl;
   }
 
-  cout << "Threaded Total:\t\t" << threaded_sum
-      << " seconds" << endl;
-  cout << "Threaded Avg:\t\t"  << threaded_sum / runs
-      << " seconds" << endl;
+  cout << "Threaded Total/Avg:\t\t" << threaded_sum << " / "
+       << threaded_sum / runs << " seconds" << endl;
+  cout << "MQT Threaded Total/Avg:\t\t" << mqt_sum << " / "
+       << mqt_sum / runs << " seconds" << endl;
+  cout << "Raw Threaded Total/Avg:\t" << raw_threaded_sum << " / "
+       << raw_threaded_sum / runs << " seconds" << endl;
 
   // print speedup
   if(with_iterative) {
     double speedup = (iterative_sum / threaded_sum);
-    cout << "Speedup:\t\t" << speedup << "x" << endl;
-    cout << "Optimal:\t\t" << threads << "x" << endl;
+    cout << "Speedup:\t\t\t\t" << speedup << "x" << endl;
+    cout << "Raw Speedup:\t\t\t" << iterative_sum / raw_threaded_sum
+         << "x" << endl;
+    cout << "Cortex overhead:\t\t"
+        << (threaded_sum - raw_threaded_sum) / raw_threaded_sum * 100
+        << "%" << endl;
+    cout << "Optimal:\t\t\t\t" << threads << "x" << endl;
   }
 
   return 0;
