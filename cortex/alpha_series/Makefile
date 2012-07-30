@@ -1,5 +1,5 @@
-#DEBUG=-g
-DEBUG=-O2
+DEBUG=-g
+#DEBUG=-O2
 
 all:
 	make botbots; make ct; make jobtest;
