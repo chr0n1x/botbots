@@ -130,7 +130,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts)
                 option.erase(0, 1);
             }
 
-            if( opts.find(option) != opts.end() ) {
+            if( opts.find(option) != opts.end() && i < argc-1) {
                 int val = atoi(argv[++i]);
                 opts[option] = val;
             }
@@ -141,7 +141,7 @@ bool parseOptions(int argc, char ** argv, map<string, int> &opts)
         }
 
         if(showHelp || opts.find("help")->second) {
-            cout << "Usage:\t" << argv[0]
+            cout << "Usage:\t" << argv[0] << " [flags]" << endl
                  << " --threads_only    Don't run an iterative pass" << endl
                  << " --runs            Number of passes"            << endl
                  << " --threads         Number of threads per pool"  << endl
