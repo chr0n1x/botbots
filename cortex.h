@@ -22,16 +22,16 @@ namespace the_cortex {
 class Cortex
 {
 
-  static const int MAX_THREADS = 8;
+    static const int MAX_THREADS = 8;
 
-  // PRIVATE DATA
+    // PRIVATE DATA
 
-  condition_vars::ConditionVariable d_cv_has_work;
-  condition_vars::ConditionVariable d_cv_queue_empty;
-  mutex::Mutex                      d_mutex;
-  std::queue<functional::Task*>     d_gate;
-  std::vector<pthread_t>            d_workers;
-  bool                              d_processing;
+    condition_vars::ConditionVariable d_cv_has_work;
+    condition_vars::ConditionVariable d_cv_queue_empty;
+    mutex::Mutex                      d_mutex;
+    std::queue<functional::Task*>     d_gate;
+    std::vector<pthread_t>            d_workers;
+    bool                              d_processing;
 
   public:
 
@@ -40,8 +40,7 @@ class Cortex
     ~Cortex();
 
     /**
-     *  enqueue_task()
-     *
+     *  queue_task()
      *  Task* pointer to the task to execute. Note that the cortex will own
      *  this pointer after being passed and should not be modified after
      *  passing.
@@ -51,17 +50,17 @@ class Cortex
     void enqueue_task(functional::Task *task);
 
     /**
-     *  process_next_function()
+     *  process_next_gate_element()
      */
     bool process_next_function();
 
     /**
-     *  process_iteratively()
+     *  process_gate_iteratively()
      *
      *  Goes through the entire queue, processing all tasks 1 by 1 in the
      *  calling thread
      */
-    void process_iteratively();
+    void process_gate_iteratively();
 
     /**
      *  start()
@@ -79,21 +78,21 @@ class Cortex
 
 
     /**
-     *  drain()
+     *  wait_for_empty_queue()
      *
      * Block until the queue is empty
      */
     void drain();
 
     /**
-     *  started()
+     *  process_signal()
      *
      *  Return true if the cortex is processing and false otherwise
      */
-    bool started();
+    bool isStarted();
 
    /**
-    *  size()
+    *  objects_in_gate()
     *
     *  Return the number of objects queued in the gate
     */

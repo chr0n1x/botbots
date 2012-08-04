@@ -3,59 +3,49 @@
 namespace the_cortex {
 
 namespace {
-  /**
-   *  cortex_worker_thread()
-   *
-   *  (void*) arg The cortex to be read from
-   *
-   *  Thread function that the workers use to access the cortex that they
-   *  belong to and process the next cortex_object
-   */
-  void* cortex_worker_thread(void* arg)
-  {
+ /**
+  *  cortex_worker_thread()
+  *  (void*) arg The cortex to be read from
+  *
+  *  Thread function that the workers use to access the cortex that they
+  *  belong to and process the next cortex_object
+  */
+void* cortex_worker_thread(void* arg)
+{
     Cortex* core = (Cortex*) arg;
-    while(core->started())
+    while(core->isStarted())
     {
-      core->process_next_function();
+        core->process_next_function();
     }
     return NULL;
-  }
 }
+
+} // close unnamed namespace
 
 Cortex::Cortex(int numThreads)
 : d_processing(false)
 {
-  if (numThreads > MAX_THREADS) {
-    numThreads = MAX_THREADS;
-  }
-  d_workers.resize(numThreads);
+    if (numThreads > MAX_THREADS) {
+        numThreads = MAX_THREADS;
+    }
+    d_workers.resize(numThreads);
 }
 
 Cortex::~Cortex()
 {
-  // wait for all of the threads to finish processing tasks and join
-  stop();
+    // delete any remaining tasks
+    stop();
 
-  // delete any remaining tasks
-  d_mutex.lock();
-  while (!d_gate.empty())
-  {
-    functional::Task *job = d_gate.front();
-    d_gate.pop();
-    delete job;
-  }
-  d_mutex.unlock();
+    d_mutex.lock();
+    while (!d_gate.empty())
+    {
+        functional::Task *job = d_gate.front();
+        d_gate.pop();
+        delete job;
+    }
+    d_mutex.unlock();
 }
 
-/**
- *  enqueue_task()
- *
- *  Task* pointer to the task to execute. Note that the cortex will own
- *  this pointer after being passed and should not be modified after
- *  passing.
- *
- *  Enqueue this function onto the threadpool
- */
 void Cortex::enqueue_task(functional::Task *task)
 {
   d_mutex.lock();
@@ -66,60 +56,54 @@ void Cortex::enqueue_task(functional::Task *task)
 
 /**
  *  process_next_function()
- *
- *  Function used by the worker threads and ONLY by the worker threads
  */
 bool Cortex::process_next_function()
 {
-  functional::Task *ret = NULL;
+    functional::Task *ret = NULL;
 
-  d_mutex.lock();
-  while(d_processing) {
-    if (d_gate.empty()) {
-      // if there are no more tasks when this thread accesses the queue
-      // signal the parent thread that the queue is empty
-      // then release d_mutex and wait for the has_work CV
-      synchronize::raiseSignal(d_cv_queue_empty);
-      synchronize::waitOnCondition(d_cv_has_work, d_mutex);
+    d_mutex.lock();
+    while(d_processing)
+    {
+        if (d_gate.empty()) {
+            synchronize::signalAll(d_cv_queue_empty);
+            synchronize::waitOnCondition(d_cv_has_work, d_mutex);
+        }
+        else {
+            break;
+        }
     }
-    else {
-      break;
+    if(d_processing) {
+        ret = d_gate.front();
+        d_gate.pop();
     }
-  }
+    d_mutex.unlock();
 
-  // make sure that the cortex is still flagged to process tasks
-  // !d_processing implies that this thread was woken to join
-  if(d_processing) {
-    ret = d_gate.front();
-    d_gate.pop();
-  }
-  d_mutex.unlock();
-
-  // have another check for this so that it is possible to unlock the mutex asap
-  if(d_processing)
-    ret->execute();
-
-  return true;
+    if(d_processing) {
+        ret->execute();
+        delete ret;
+    }
+    return true;
 }
 
 /**
- *  process_iteratively()
+ *  process_gate_iteratively()
  *
  *  Goes through the entire queue, processing all tasks 1 by 1 in the
  *  calling thread
  */
-void Cortex::process_iteratively()
+void Cortex::process_gate_iteratively()
 {
-  // case where thread-mode is running and this function is called
-  stop();
+    stop();
 
-  d_mutex.lock();
-  while(!d_gate.empty())
-  {
-    d_gate.front()->execute();
-    d_gate.pop();
-  }
-  d_mutex.unlock();
+    d_mutex.lock();
+    while(!d_gate.empty())
+    {
+        functional::Task *job = d_gate.front();
+        d_gate.pop();
+        job->execute();
+        delete job;
+    }
+    d_mutex.unlock();
 }
 
 /**
@@ -129,16 +113,17 @@ void Cortex::process_iteratively()
  */
 void Cortex::start()
 {
-  if(!d_processing) {
-    d_processing = true;
+    if(!d_processing) {
+        d_processing = true;
 
-    for(int i = 0; i < d_workers.size(); ++i)
-    {
-      pthread_create(&d_workers[i], NULL, cortex_worker_thread, (void*)this);
+        for(int i = 0; i < d_workers.size(); ++i)
+        {
+            pthread_create(&d_workers[i], NULL,
+                           cortex_worker_thread, (void*)this);
+        }
     }
-  }
 
-  return;
+    return;
 }
 
 /**
@@ -148,64 +133,62 @@ void Cortex::start()
  */
 void Cortex::stop()
 {
-  if (d_processing) {
-    d_processing = false;
-    synchronize::signalAll(d_cv_has_work);
+    if (d_processing) {
+        d_processing = false;
+        synchronize::signalAll(d_cv_has_work);
 
-    for(int i=0; i < d_workers.size(); ++i)
-    {
-      pthread_join(d_workers[i], NULL);
+        for(int i=0; i < d_workers.size(); ++i)
+        {
+            pthread_join(d_workers[i], NULL);
+        }
     }
-  }
 
-  return;
+    return;
 }
 
 
 /**
- *  drain()
+ *  wait_for_empty_queue()
  *
  * Block until the queue is empty
  */
 void Cortex::drain()
 {
-  bool stillProcessing = true;
-  while (stillProcessing)
-  {
-    d_mutex.lock();
-    stillProcessing = !d_gate.empty();
-    d_mutex.unlock();
+    bool stillProcessing = true;
+    while (stillProcessing)
+    {
+        d_mutex.lock();
+        stillProcessing = !d_gate.empty();
+        d_mutex.unlock();
 
-    if (stillProcessing) {
-      d_mutex.lock();
-      synchronize::signalAll(d_cv_has_work);
-      synchronize::waitOnCondition( d_cv_queue_empty, d_mutex );
-      d_mutex.unlock();
+        if (stillProcessing) {
+            d_mutex.lock();
+            synchronize::signalAll(d_cv_has_work);
+            synchronize::waitOnCondition( d_cv_queue_empty, d_mutex );
+            d_mutex.unlock();
+        }
     }
-  }
 }
 
 /**
- *  started()
+ *  process_signal()
  *
  *  Return true if the cortex is processing and false otherwise
  */
-bool Cortex::started()
+bool Cortex::isStarted()
 {
-  return d_processing;
+    return d_processing;
 }
 
 /**
-*  size()
+*  objects_in_gate()
 *
 *  Return the number of objects queued in the gate
 */
 size_t Cortex::size()
 {
-  size_t ret = 0;
-  d_mutex.lock();
-  ret = d_gate.size();
-  d_mutex.unlock();
+    mutex::MutexGuard guard(&d_mutex);
+    return d_gate.size();
 }
 
 }  // close the_cortex namespace

@@ -12,6 +12,9 @@ YOU CAN FIND INFORMATION ON NCURSES HERE: http://www.gnu.org/software/ncurses/
   * make botbots
   * ./botbots
 
+NOTE: If you have trouble compiling, try changing the -lpthread flags to -pthread
+if you're getting undefined references to pthread_create and similar functions
+
 -- ETC --
 
 The default dimensions of the grid itself are currently 5x5.

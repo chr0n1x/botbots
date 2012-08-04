@@ -1,279 +1,302 @@
 #include "boundjob.h"
 #include "cortex.h"
+#include "multiqueue_threadpool.h"
 #include "timer.h"
 
 using namespace the_cortex;
+using namespace functional;
 
+#include <algorithm>
 #include <iostream>
-#include <string>
 #include <map>
-#include <set>
+#include <string>
+#include <vector>
 
 #include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
-#define BENCHMARK     true
-
-unsigned long long ELEMENTS = 500000;
-unsigned long long POINTLESSNESS = 1000;
+#define P(val) cout << #val << " = " << val << " "
 
 namespace {
-  void wasteTimeWithMath(double *mod, int num)
-  {
-    for (int i = 0; i < POINTLESSNESS; ++i) {
-      *mod = *mod * num / num + num - num;
+    void wasteTimeWithMath(int numIterations)
+    {
+        double dummy1, dummy2;
+        for (int i = 0; i < numIterations; ++i)
+        {
+            dummy1 = dummy2*dummy1+dummy2/dummy1-dummy2*dummy1;
+        }
     }
-  }
+
+    void genAndSort(int numElements)
+    {
+        vector<int> randElem(numElements);
+        for(int i = 0; i < numElements; ++i)
+        {
+            randElem[i] = i;
+        }
+        random_shuffle(randElem.begin(), randElem.end());
+        sort(randElem.begin(), randElem.end());
+    }
 }
-/**
- *   Polymorphic classes
- */
-class object {
-  public:
-    double blah;
-    virtual void func1() {
-      wasteTimeWithMath(&blah, 2);
-      if(!BENCHMARK) cout << "obj -- func1 -- blah = " << blah << endl;
+
+void fill(Cortex &c, const vector<int>& numbers)
+{
+    for(size_t i = 0; i < numbers.size(); ++i)
+    {
+        //c.enqueue_task(BindUtil::bind(&wasteTimeWithMath, numbers[i]));
+        c.enqueue_task(BindUtil::bind(&genAndSort, numbers[i]));
     }
-    virtual void func2() {
-      wasteTimeWithMath(&blah, 3);
-      if(!BENCHMARK) cout << "obj -- func2 -- blah = " << blah << endl;
+}
+
+void fill(MultiQueueThreadpool &mqt, const vector<int>& numbers)
+{
+    for(size_t i = 0; i < numbers.size(); ++i)
+    {
+        //mqt.enqueue_task(BindUtil::bind(&wasteTimeWithMath, numbers[i]));
+        mqt.enqueue_task(BindUtil::bind(&genAndSort, numbers[i]));
     }
-    void set_blah(double in) {
-      blah = in;
+}
+
+void process_in_thread(const vector<int>& numbers)
+{
+    for(size_t i = 0; i < numbers.size(); ++i)
+    {
+        //wasteTimeWithMath(numbers[i]);
+        genAndSort(numbers[i]);
     }
+}
+
+struct WorkerData
+{
+    int start, end;
+    const vector<int>& numbers;
 };
 
-class foo : public object {
-  public:
-    void func1() {
-      wasteTimeWithMath(&blah, 4);
-      if(!BENCHMARK) cout << "foo -- func1 -- blah = " << blah << endl;
+void *raw_worker(void *data)
+{
+    WorkerData *work = (WorkerData*)data;
+    for (int i = work->start; i < work->end; ++i)
+    {
+        //wasteTimeWithMath(work->numbers[i]);
+        genAndSort(work->numbers[i]);
     }
-    void func2() {
-      wasteTimeWithMath(&blah, 5);
-      if(!BENCHMARK) cout << "foo -- func2 -- blah = " << blah << endl;
-    }
-};
-
-class bar : public object {
-  public:
-    void func1() {
-      wasteTimeWithMath(&blah, 2);
-      if(!BENCHMARK) cout << "bar -- func1 -- blah = " << blah << endl;
-    }
-    void func2() {
-      wasteTimeWithMath(&blah, 2);
-      if(!BENCHMARK) cout << "bar -- func2 -- blah = " << blah << endl;
-    }
-};
-
-/**
- *   Thread functions
- */
-void _threaded_a(object *arg) {
-   arg->func1();
+    return NULL;
 }
 
-void _threaded_b(object *arg) {
-   arg->func2();
+void runRawThreadTest(int numThreads, const vector<int>& numbers)
+{
+    std::vector<pthread_t>    workers(numThreads);
+    int num_elements    = numbers.size();
+    int iter_per_thread = num_elements / numThreads;
+    int extra_load      = num_elements - (iter_per_thread*(numThreads-1));
+    int start           = extra_load;
+    // this one thread may have to work a bit harder, not balanced...
+    WorkerData leftover = {0, extra_load, numbers};
+    // So lets start him first
+    pthread_create(&workers[0], NULL, raw_worker, (void*)&leftover);
+    for(int i = 1; i < workers.size(); ++i)
+    {
+        WorkerData data = {start, start + iter_per_thread, numbers};
+        pthread_create(&workers[i], NULL, raw_worker, (void*)&data);
+        start += iter_per_thread;
+    }
+
+    for(int i=0; i < workers.size(); ++i)
+    {
+        pthread_join(workers[i], NULL);
+    }
 }
 
+
 /**
- *   fill()
+ *     parseOptions()
  *
- *   pretty self explanatory
+ *     Takes argc, argv and an option map from main() Goes through the options
+ *     passed in.
+ *
+ *     returns false if there are unrecognized options in argv
  */
-void fill(Cortex &c, object *b, object *f) {
-  for(size_t i=0; i<ELEMENTS; ++i)
-  {
-    c.enqueue_task(functional::BindUtil::bind(&_threaded_a, f));
-    c.enqueue_task(functional::BindUtil::bind(&_threaded_b, f));
-    c.enqueue_task(functional::BindUtil::bind(&_threaded_a, b));
-    c.enqueue_task(functional::BindUtil::bind(&_threaded_b, b));
-  }
+bool parseOptions(int argc, char ** argv, map<string, int> &opts)
+{
+    bool showHelp = false;
+    if(argc > 1) {
+        for(int i=1; i<argc; ++i)
+        {
+            string option(argv[i]);
+
+            while (option[0] == '-') {
+                option.erase(0, 1);
+            }
+
+            if( opts.find(option) != opts.end() && i < argc-1) {
+                int val = atoi(argv[++i]);
+                opts[option] = val;
+            }
+            else {
+                cout << "Unknown option: " << option << endl;
+                showHelp = true;
+            }
+        }
+
+        if(showHelp || opts.find("help")->second) {
+            cout << "Usage:\t" << argv[0] << " [flags]" << endl
+                 << " --threads_only    Don't run an iterative pass" << endl
+                 << " --runs            Number of passes"            << endl
+                 << " --threads         Number of threads per pool"  << endl
+                 << " --help            Display this text"           << endl
+                 << " --elements        Number of jobs per pass"     << endl
+                 << " --range_max       Maximum complexity per task" << endl
+                 << " --sort            Sort work complexities"      << endl
+                 << "All arguments take a single integer. "
+                 << "0=Off for boolean arguments"                    << endl;
+            return false;
+        }
+
+        cout << "Running "     << opts["runs"]
+             << " passes for " << opts["elements"] << " elements "
+             << "with "        << opts["threads"]  << " threads;" << endl;
+    }
+
+    return true;
 }
 
 /**
- *   parseOptions()
- *
- *   Takes argc, argv and an option map from main()
- *   Goes through the options passed in. The first numerical value given will be the number of runs
- *   Any numerical value after that will be the number of threads for the cortexes.
- *
- *   returns false if there are unrecognized options in argv
+ *     main()
  */
-bool parseOptions(int argc, char ** argv, map<string, int> &opts) {
+int main(int argc, char ** argv)
+{
+    srand(time(NULL));
+    // setting up flags and options
+    map<string, int> opts;
+    typedef pair<string, int> opts_t;
+    opts.insert( opts_t("threads_only", 0) );
+    opts.insert( opts_t("runs", 1) );
+    opts.insert( opts_t("threads", 2) );
+    opts.insert( opts_t("help", 0) );
+    opts.insert( opts_t("elements", 10000) );
+    opts.insert( opts_t("range_max", 10000) );
+    opts.insert( opts_t("sort", 0) );
 
-  if(argc > 1) {
-    set<string> unknown_options;
-
-    int dummy = 0;
-    bool runs_assigned = false;
-    bool elements_assigned = false;
-    bool pointlessness_assigned = false;
-    bool flags_found = false;
-
-    for(int i=1; i<argc; ++i) {
-      dummy = atoi(argv[i]);
-
-      // has a dash so...non numeric
-      if(dummy == 0) {
-        string option(argv[i]);
-        int dash_pos = option.find("-", 0);
-        while(dash_pos != string::npos) {
-            option.erase(dash_pos, 1);
-            dash_pos = option.find("-", 0);
-        }
-
-        if( opts.find(option) != opts.end() ) {
-          opts[option] = 1;
-          flags_found = true;
-        }
-        else {
-          unknown_options.insert(option);
-        }
-      }
-      // numeric...?
-      else {
-        if(!runs_assigned) {
-          opts["runs"] = atoi(argv[i]);
-          runs_assigned = true;
-        }
-        else if(!elements_assigned) {
-          ELEMENTS = atoi(argv[i]);
-          elements_assigned = true;
-        }
-        else if(!pointlessness_assigned) {
-          POINTLESSNESS = atoi(argv[i]);
-          pointlessness_assigned = true;
-        }
-        else {
-          opts["threads"] = atoi(argv[i]);
-        }
-      }
+    if(!parseOptions(argc, argv, opts)) {
+        return 0;
     }
 
-    if(unknown_options.empty()) {
+    int threads         = opts.find("threads")->second;
+    int runs            = opts.find("runs")->second;
+    bool with_iterative = opts.find("threads_only")->second == 0;
+    int range_max       = opts.find("range_max")->second;
+    int num_elements    = opts.find("elements")->second;
 
-      if(opts.find("help")->second) {
-        cout << "Usage:\t" << argv[0] << " [n_runs] [n_elements] [n_threads] [flags]" << endl;
-        cout << "Note:\tcmd line input is optional; order of numerical values matter; n_elements multiplied by 4"
-          << endl;
-        return false;
-      }
+    double iterative_sum = 0;
+    double threaded_sum = 0;
+    double mqt_sum = 0;
+    double raw_threaded_sum = 0;
+    double totalLinearTime;
 
-      if(flags_found) {
-        cout << "Option(s):" << endl;
-        map<string, int>::iterator map_it = opts.begin();
-        for(map_it; map_it != opts.end(); ++map_it) {
-          if(map_it->second && map_it->first.compare("runs") != 0 && map_it->first.compare("threads") != 0)
-            cout << "\t" << map_it->first << endl;
+    // generate the set of numbers to work off of
+    unsigned long long averageComplexity = 0;
+    vector<int> complexities(num_elements);
+    for (int i = 0; i < complexities.size(); ++i)
+    {
+        complexities[i] = rand() % range_max + 1;
+        averageComplexity += complexities[i];
+    }
+
+    cout << "Average work value = "
+         << averageComplexity / num_elements << endl;
+
+    if (opts.find("sort")->second != 0) {
+        sort(complexities.begin(), complexities.end());
+    }
+
+    for(int passes=0; passes<runs; ++passes)
+    {
+        cout << "Pass\t" << passes+1 << endl;
+
+        if(with_iterative) {
+            // ITERATIVE PASS
+            prof::Timer it_timer;
+            it_timer.start();
+            process_in_thread(complexities);
+            it_timer.stop();
+            totalLinearTime = it_timer.elapsed_time();
+            iterative_sum += totalLinearTime;
+            cout << "\tIterative:\t" << totalLinearTime << " seconds" << endl;
         }
-      }
 
+        // THREADED PASS
+        prof::Timer thr_timer;
+        thr_timer.start();
+        Cortex threadpool(threads);
+        threadpool.start();
+
+        fill(threadpool, complexities);
+        threadpool.drain();
+
+        threadpool.stop();
+        thr_timer.stop();
+        totalLinearTime = thr_timer.elapsed_time();
+        threaded_sum += totalLinearTime;
+        cout << "\tThreaded:\t" << (double)totalLinearTime
+             << " seconds" << endl;
+
+        // multiqueue_threadpool pass
+        prof::Timer mqt_timer;
+        mqt_timer.start();
+        MultiQueueThreadpool mqt_tp(threads);
+        mqt_tp.start();
+
+        fill(mqt_tp, complexities);
+        mqt_tp.drain();
+
+        mqt_tp.stop();
+        mqt_timer.stop();
+        totalLinearTime = mqt_timer.elapsed_time();
+        mqt_sum += totalLinearTime;
+        cout << "\tMQT Threaded:\t" << (double)totalLinearTime
+             << " seconds" << endl;
+
+        // Raw threads
+        prof::Timer raw_timer;
+        raw_timer.start();
+        runRawThreadTest(threads, complexities);
+        raw_timer.stop();
+        totalLinearTime = raw_timer.elapsed_time();
+        raw_threaded_sum += totalLinearTime;
+        cout << "\tRaw Threaded:\t" << (double)totalLinearTime
+                 << " seconds" << endl;
     }
-    else {
-      cout << "Unknown Option(s):" << endl;
-      set<string>::iterator set_it = unknown_options.begin();
-      for(set_it; set_it != unknown_options.end(); ++set_it)
-        cout << "\t" << *set_it << endl;
-      cout << "Try:\t" << argv[0] << " -help" << endl;
-      return false;
-    }
-  }
 
-  cout << "Running " << opts["runs"] << " passes for " << 4*ELEMENTS << " elements ";
-  cout << "with " << opts["threads"] << " threads;" << endl;
-  cout << "Pointlessness: " << POINTLESSNESS << endl;
-
-  return true;
-}
-
-/**
- *   main()
- */
-int main(int argc, char ** argv) {
-
-  // setting up flags and options
-  map<string, int> opts;
-  typedef pair<string, int> opts_t;
-  opts.insert( opts_t("threads_only", 0) );
-  opts.insert( opts_t("runs", 1) );
-  opts.insert( opts_t("threads", 2) );
-  opts.insert( opts_t("help", 0) );
-
-  if(!parseOptions(argc, argv, opts))
-    return 0;
-  int threads = opts["threads"];
-  int runs = opts["runs"];
-  bool with_iterative = (opts.find("threads_only") != opts.end() && opts.find("threads_only")->second == 0);
-
-  // c1 for iterative, c2 for threaded
-  Cortex c1(threads), c2(threads);
-  // start the threads; workers should automatically block
-  c2.start();
-
-  double iterative_sum = 0;
-  double threaded_sum = 0;
-  double totalLinearTime;
-
-  for(int passes=0; passes<runs; ++passes) {
-    // generate a new set of objects each iteration to prevent any compiler
-    // optimizations
-    foo f;
-    f.set_blah(rand());
-    bar b;
-    b.set_blah(rand());
-    cout << "Pass\t" << passes+1 << endl;
+    cout << "--------------------------------------\n";
+    cout << "Total Run Time:\t\t" << iterative_sum+threaded_sum
+            << " seconds" << endl;
 
     if(with_iterative) {
-      // ITERATIVE PASS
-      prof::Timer it_timer;
-      it_timer.start();
-      fill(c1, &b, &f);
-      c1.process_iteratively();
-      it_timer.stop();
-      totalLinearTime = it_timer.elapsed_time();
-      iterative_sum += totalLinearTime;
-      cout << "\tIterative:\t" << totalLinearTime << " seconds" << endl;
+        cout << "Iterative Total/Avg:\t" << iterative_sum << " / "
+                 << iterative_sum / runs << " seconds" << endl;
     }
 
-    // THREADED PASS
-    prof::Timer thr_timer;
-    thr_timer.start();
-    fill(c2, &b, &f);
-    c2.drain();
-    thr_timer.stop();
-    totalLinearTime = thr_timer.elapsed_time();
-    threaded_sum += totalLinearTime;
-    cout << "\tThreaded:\t" << (double)totalLinearTime << " seconds" << endl;
-  }
-  c2.stop();
+    cout << "Threaded Total/Avg:\t" << threaded_sum << " / "
+             << threaded_sum / runs << " seconds" << endl;
+    cout << "MQT Threaded Total/Avg:\t" << mqt_sum << " / "
+             << mqt_sum / runs << " seconds" << endl;
+    cout << "Raw Threaded Total/Avg:\t" << raw_threaded_sum << " / "
+             << raw_threaded_sum / runs << " seconds" << endl;
 
-  cout << "--------------------------------------\n";
-  cout << "Total Run Time:\t\t" << iterative_sum+threaded_sum
-      << " seconds" << endl;
-
-  if(with_iterative) {
-    cout << "Iterative Total:\t" << iterative_sum
-        << " seconds" << endl;
-    cout << "Iterative Avg:\t\t" << iterative_sum / runs
-        << " seconds" << endl;
-  }
-
-  cout << "Threaded Total:\t\t" << threaded_sum
-      << " seconds" << endl;
-  cout << "Threaded Avg:\t\t"  << threaded_sum / runs
-      << " seconds" << endl;
-
-  // print speedup
-  if(with_iterative) {
-    double speedup = (iterative_sum / threaded_sum);
-    cout << "Speedup:\t\t" << speedup << "x" << endl;
+    // print speedup
+    if(with_iterative) {
+        double speedup = (iterative_sum / threaded_sum);
+        cout << "Speedup:\t\t" << speedup << "x" << endl;
+        cout << "Raw Speedup:\t\t" << iterative_sum / raw_threaded_sum
+             << "x" << endl;
+    }
+    cout << "Cortex overhead:\t"
+         << (threaded_sum - raw_threaded_sum) / raw_threaded_sum * 100
+         << "%" << endl;
     cout << "Optimal:\t\t" << threads << "x" << endl;
-  }
 
-  return 0;
+
+    return 0;
 }
